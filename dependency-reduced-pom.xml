@@ -13,6 +13,9 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
+          <excludes>
+            <exclude>**/edu/harvard/econcs/jopt/solver/server/cplex/*.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
@@ -26,7 +29,6 @@
             </goals>
           </execution>
         </executions>
-        <configuration />
       </plugin>
     </plugins>
   </build>
@@ -43,6 +45,15 @@
       <url>file://${project.basedir}/lib</url>
     </repository>
   </repositories>
+  <dependencies>
+    <dependency>
+      <groupId>lpsolve</groupId>
+      <artifactId>lpsolve</artifactId>
+      <version>5.5</version>
+      <scope>system</scope>
+      <systemPath>C:\Users\blubin\git\JOpt/lib/lpsolve55j.jar</systemPath>
+    </dependency>
+  </dependencies>
   <properties>
     <slf4j.version>1.7.7</slf4j.version>
     <log4j.version>2.3</log4j.version>
