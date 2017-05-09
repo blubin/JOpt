@@ -33,17 +33,6 @@
     </plugins>
   </build>
   <repositories>
-    <repository>
-      <releases>
-        <checksumPolicy>ignore</checksumPolicy>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>lib</id>
-      <name>lib</name>
-      <url>file://${project.basedir}/lib</url>
-    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -51,7 +40,7 @@
       <artifactId>lpsolve</artifactId>
       <version>5.5</version>
       <scope>system</scope>
-      <systemPath>C:\Users\blubin\git\JOpt/lib/lpsolve55j.jar</systemPath>
+      <systemPath>${basedir}/lib/lpsolve55j.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

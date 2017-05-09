@@ -6,7 +6,6 @@
     <version>1.2</version>
     <name>Java Optimization</name>
     <build>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -17,19 +16,13 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
     <properties>
         <slf4j.version>1.7.7</slf4j.version>
         <log4j.version>2.3</log4j.version>
-
-        <!-- current log4j 2 release -->
     </properties>
-
     <dependencies>
-
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -52,31 +45,21 @@
             <artifactId>log4j-core</artifactId>
             <version>${log4j.version}</version>
         </dependency>
-
         <dependency>
             <groupId>cplex</groupId>
             <artifactId>cplex</artifactId>
             <version>12.6.1</version>
+          <scope>system</scope>
+          <systemPath>${CPLEX_HOME}/cplex.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>lpsolve</groupId>
-            <artifactId>lpsolve</artifactId>
-            <version>5.5</version>
+          <groupId>lpsolve</groupId>
+          <artifactId>lpsolve</artifactId>
+          <version>5.5</version>
+          <scope>system</scope>
+          <systemPath>${basedir}/lib/lpsolve55j.jar</systemPath>
         </dependency>
     </dependencies>
     <repositories>
-        <repository>
-            <id>lib</id>
-            <name>lib</name>
-            <releases>
-                <enabled>true</enabled>
-                <checksumPolicy>ignore</checksumPolicy>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <url>file://${project.basedir}/lib</url>
-        </repository>
     </repositories>
-
 </project>
