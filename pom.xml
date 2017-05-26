@@ -57,15 +57,12 @@
             <groupId>cplex</groupId>
             <artifactId>cplex</artifactId>
             <version>12.6.1</version>
-          <scope>system</scope>
-          <systemPath>${CPLEX_HOME}/cplex.jar</systemPath>
+            <optional>true</optional>
         </dependency>
         <dependency>
-          <groupId>lpsolve</groupId>
+          <groupId>com.datumbox</groupId>
           <artifactId>lpsolve</artifactId>
-          <version>5.5</version>
-          <scope>system</scope>
-          <systemPath>${basedir}/lib/lpsolve55j.jar</systemPath>
+          <version>5.5.2.0</version>
         </dependency>
     </dependencies>
     <repositories>
