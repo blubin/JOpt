@@ -28,80 +28,43 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.example;
+package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
-import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.mip.CompareType;
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.MIP;
+import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 
 /**
- * Simple JOpt usage example:<br>
- * <pre>
- * MAX 2X+2Y
- * subject to
- * X - 2Y <= 5
- * Y = 2
- * </pre>
- * 
- * @author Jeff Schneidman; Last modified by $Author: blubin $
- * @version $Revision: 1.1 $ on $Date: 2013/12/04 02:54:09 $
- * @since Dec 13, 2005
- **/
-public class SimpleLPExample {
+ * @author Benjamin Lubin; Last modified by $Author: blubin $
+ * @version $Revision: 1.7 $ on $Date: 2013/12/04 02:54:09 $
+ */
+public class IISTest {
 
-	private IMIP mip;
-    
-    public IMIP getMIP() {
-    	return mip;
-    }
-    
-    public void buildMIP() {
-    	mip = new MIP();
-    	
-    	Variable x = new Variable("x", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);
-        Variable y = new Variable("y", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);
-        
-        mip.add(x);
-        mip.add(y);
-        
-        mip.setObjectiveMax(false);
-        mip.addObjectiveTerm(2, x);
-        mip.addObjectiveTerm(2, y);
-
-        Constraint c1 = new Constraint(CompareType.LEQ, 5);
-        c1.addTerm(1, x);
-        c1.addTerm(2, y);
-        mip.add(c1);
-
-        Constraint c2 = new Constraint(CompareType.EQ, 2);
-        c2.addTerm(1, y);
-        mip.add(c2);        
-    }
-    
-    public IMIPResult solve(SolverClient client) {
-        mip.setSolveParam(SolveParam.CALC_DUALS, true);
-    	IMIPResult result = client.solve(mip);
-    	System.out.println(result.getDual(mip.getConstraints().get(0)));
-        System.out.println(result.getDual(mip.getConstraints().get(1)));
-        return result;
-    }
-
-    public static void main(String[] argv) {
-    	SimpleLPExample example = new SimpleLPExample();
-    	example.buildMIP();
-    	System.out.println(example.getMIP());
-    	System.out.println(example.solve(new SolverClient()));
-    }
-
-    public static IMIPResult test(SolverClient client) {
-        SimpleLPExample example = new SimpleLPExample();
-        example.buildMIP();
-        return example.solve(client);
-    }
+	public static void main(String[] args) {
+		IMIP mip = new MIP();
+		Variable v = new Variable("a", VarType.INT, 0, 2);
+		mip.add(v);
+		Constraint c1 = new Constraint(CompareType.GEQ, 1);
+		c1.addTerm(new LinearTerm(1, v));
+		Constraint c2 = new Constraint(CompareType.GEQ, 2);
+		c2.addTerm(new LinearTerm(1, v));
+		Constraint c3 = new Constraint(CompareType.LEQ, 1);
+		c3.addTerm(new LinearTerm(1, v));
+		mip.add(c1);
+		mip.add(c2);
+		mip.add(c3);
+		mip.setObjectiveMax(true);
+		mip.addObjectiveTerm(1, v);
+		
+		mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
+		
+	    SolverClient solverClient = new SolverClient("econcs.eecs.harvard.edu", 2000);
+	    System.out.println(solverClient.solve(mip));
+	}
 }

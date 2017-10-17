@@ -335,7 +335,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 numberOfBooleanAndIntVariables++;
             }
             IloNumVar numVar = cplex.numVar(var.getLowerBound(), var.getUpperBound(), varType, var.getName());
-            assert (numVar.getLB() >= 0);
+            // assert (numVar.getLB() >= 0);
             vars.put(var.getName(), numVar);
         }
         cplex.add(vars.values().toArray(new IloNumVar[vars.size()]));

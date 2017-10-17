@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.harvard.econcs</groupId>
     <artifactId>jopt</artifactId>
-    <version>1.2</version>
+    <version>1.2.1</version>
     <name>Java Optimization</name>
     <build>
         <plugins>
@@ -49,6 +49,11 @@
         <log4j.version>2.3</log4j.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

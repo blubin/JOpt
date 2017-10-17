@@ -139,8 +139,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
             // add constraints
             List<Constraint> constraints = mip.getConstraints();
-            for (int i = 0; i < constraints.size(); i++) {
-                Constraint c = constraints.get(i);
+            for (Constraint c : constraints) {
                 List<LinearTerm> terms = getTerms(mip, activeVars, c);
                 double[] row = new double[activeVars.size() + 1];
                 for (int j = 0; j < activeVars.size(); j++) {
@@ -173,18 +172,18 @@ public class LPSolveMIPSolver implements IMIPSolver {
             }
 
             // Fill the results:
-            Map<String, Double> values = new HashMap<String, Double>();
+            Map<String, Double> values = new HashMap<>();
             double[] vars = solver.getPtrVariables();
             for (int i = 0; i < activeVars.size(); i++) {
                 Variable v = activeVars.get(i);
-                values.put(v.getName(), new Double(vars[i]));
+                values.put(v.getName(), vars[i]);
             }
             Map<Constraint, Double> duals = null;
             if (mip.getBooleanSolveParam(SolveParam.CALC_DUALS, false)) {
-                duals = new HashMap<Constraint, Double>();
+                duals = new HashMap<>();
                 double[] dualVars = solver.getPtrDualSolution();
                 for (int i = 0; i < constraints.size(); i++) {
-                    duals.put(mip.getConstraints().get(i), new Double(dualVars[i + 1]));
+                    duals.put(mip.getConstraints().get(i), dualVars[i + 1]);
                 }
             }
 
@@ -210,8 +209,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
     private List<Variable> getActiveVars(IMIP mip) {
         List<Variable> ret = new ArrayList<Variable>(mip.getNumVars());
-        for (Iterator<?> iter = mip.getVars().values().iterator(); iter.hasNext();) {
-            Variable v = (Variable) iter.next();
+        for (Variable v : mip.getVars().values()) {
             if (!v.ignore()) {
                 ret.add(v);
             }
@@ -223,7 +221,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
         if (!mip.getQuadraticObjectiveTerms().isEmpty()) {
             throw new MIPException("MIP has quadratic terms, not supported by LPSolve");
         }
-        Map<String, LinearTerm> ret = new HashMap<String, LinearTerm>();
+        Map<String, LinearTerm> ret = new HashMap<>();
         for (LinearTerm t : mip.getLinearObjectiveTerms()) {
             Variable v = mip.getVar(t.getVarName());
             if (!v.ignore()) {
@@ -238,8 +236,8 @@ public class LPSolveMIPSolver implements IMIPSolver {
         if (!c.getQuadraticTerms().isEmpty()) {
             throw new MIPException("Constraint has quadratic terms, not supported by LPSolve. " + c);
         }
-        List<LinearTerm> ret = new ArrayList<LinearTerm>();
-        Map<Variable, LinearTerm> varToTerm = new HashMap<Variable, LinearTerm>();
+        List<LinearTerm> ret = new ArrayList<>();
+        Map<Variable, LinearTerm> varToTerm = new HashMap<>();
         for (LinearTerm t : c.getLinearTerms()) {
             varToTerm.put(mip.getVar(t.getVarName()), t);
         }

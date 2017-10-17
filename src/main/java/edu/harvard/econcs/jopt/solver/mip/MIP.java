@@ -56,7 +56,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
      * .cfm?Product=CPLEX&FAQ=75&CFID=
      * 96044&CFTOKEN=40609383&jsessionid=92301560341115251663761
      **/
-    public static final int MAX_VALUE = 536870910;
+    public static final int MAX_VALUE = 9000000;
 
     private Map<String, Variable> vars = new HashMap();
     private Map<Variable, Object> proposedValuesForVars = null;
@@ -512,7 +512,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     // ///////////////////
 
     /**
-     * Throws exeption if n is greater than MIP.MAX_VALUE
+     * Throws exception if n is greater than MIP.MAX_VALUE
      *
      * @param n
      */

@@ -28,44 +28,33 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.test;
+package edu.harvard.econcs.jopt;
 
-import edu.harvard.econcs.jopt.solver.IMIP;
+import edu.harvard.econcs.jopt.example.ComplexExample;
+import edu.harvard.econcs.jopt.example.SimpleLPExample;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
-import edu.harvard.econcs.jopt.solver.mip.CompareType;
-import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.MIP;
-import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
-import edu.harvard.econcs.jopt.solver.mip.VarType;
-import edu.harvard.econcs.jopt.solver.mip.Variable;
+import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
+import org.junit.Test;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.4 $ on $Date: 2013/12/04 02:54:09 $
  */
-public class LPSolveTest {
-	
-	
-	public static void main(String[] args) {
-		IMIP mip = new MIP();
-		Variable v = new Variable("a", VarType.INT, 0, 3);
-		mip.add(v);
-		Constraint c1 = new Constraint(CompareType.GEQ, 1);
-		c1.addTerm(new LinearTerm(1, v));
-		Constraint c2 = new Constraint(CompareType.GEQ, 2);
-		c2.addTerm(new LinearTerm(1, v));
-		Constraint c3 = new Constraint(CompareType.LEQ, 5);
-		c3.addTerm(new LinearTerm(1, v));
-		mip.add(c1);
-		mip.add(c2);
-		mip.add(c3);
-		mip.setObjectiveMax(true);
-		mip.addObjectiveTerm(1, v);
-		
-	    SolverClient solverClient = new SolverClient(new LPSolveMIPSolver());
-	    IMIPResult result = solverClient.solve(mip);
-	    System.out.println(result);
+public class Examples {
+
+	@Test
+	public void simpleLPExample() {
+		IMIPResult lpSolveResult = SimpleLPExample.test(new SolverClient(new LPSolveMIPSolver()));
+		IMIPResult cplexResult = SimpleLPExample.test(new SolverClient(new CPlexMIPSolver()));
+		TestSuite.compareMultipleResults(lpSolveResult, cplexResult);
+	}
+
+	@Test
+	public void complexExample() {
+		IMIPResult lpSolveResult = ComplexExample.test(new SolverClient(new LPSolveMIPSolver()));
+		IMIPResult cplexResult = ComplexExample.test(new SolverClient(new CPlexMIPSolver()));
+		TestSuite.compareMultipleResults(lpSolveResult, cplexResult);
 	}
 }

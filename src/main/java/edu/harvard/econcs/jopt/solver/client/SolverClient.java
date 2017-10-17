@@ -58,9 +58,7 @@ import edu.harvard.econcs.util.TypedProperties;
  * @since Apr 12, 2004
  **/
 public class SolverClient implements IMIPSolver{
-	private static String DEFAULT_SOLVER = 
-		//"edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver";
-		"edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
+	private static String DEFAULT_SOLVER = "edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
 	
 	protected static Log log = new Log(SolverClient.class);
 	protected IMIPSolver solver;
@@ -143,12 +141,10 @@ public class SolverClient implements IMIPSolver{
 			if(log.isTraceEnabled()) {
 				log.trace("Finished de-serialiation in " + time + " millis.");
 			}
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			throw new MIPException("Serialization error", e);
-		} catch (ClassNotFoundException e) {
-			throw new MIPException("Serialization error", e);			
 		}
-		
+
 		// For scalability experiment
 		//long time = System.currentTimeMillis();
 		IMIPResult ret = solver.solve(mipObj);
@@ -174,18 +170,23 @@ public class SolverClient implements IMIPSolver{
 	 * Get a local solver
 	 */
 	protected static IMIPSolver getLocalSolver(String className) {
-		Class cl = null;
+		Class cl;
 		try {
 			cl = Class.forName(className);
 		} catch (ClassNotFoundException e) {
 			throw new MIPException("Could not create local MIPSolver");
+		} catch (NoClassDefFoundError e) {
+			if (e.getMessage().contains("IloException")) {
+				System.err.println("Tried to solve with CPLEX; However, CPLEX was not found, falling back to LP Solve.");
+				return getLocalSolver("edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver");
+			} else {
+				throw e;
+			}
 		}
 		IMIPSolver s;
 		try {
 			s = (IMIPSolver)cl.newInstance();
-		} catch (InstantiationException e1) {
-			throw new MIPException("Could not create local CPlexMIPSolver");
-		} catch (IllegalAccessException e1) {
+		} catch (InstantiationException | IllegalAccessException e1) {
 			throw new MIPException("Could not create local CPlexMIPSolver");
 		}
 		return s;
