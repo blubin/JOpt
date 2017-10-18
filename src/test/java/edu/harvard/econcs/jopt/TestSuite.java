@@ -5,8 +5,6 @@
  */
 package edu.harvard.econcs.jopt;
 
-import edu.harvard.econcs.jopt.example.ComplexExample;
-import edu.harvard.econcs.jopt.example.SimpleLPExample;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -36,12 +34,22 @@ public class TestSuite {
     }
 
     public static void compareMultipleResults(IMIPResult... results) {
+        compare(true, results);
+    }
+
+    public static void compareObjectiveMultipleResults(IMIPResult... results) {
+        compare(false, results);
+    }
+
+    private static void compare(boolean checkForEqualVariables, IMIPResult... results) {
         for (IMIPResult result : results) {
             for (IMIPResult comparison : results) {
                 Assert.assertEquals(result.getObjectiveValue(), comparison.getObjectiveValue(), 0.00000001);
                 Assert.assertEquals(result.getValues().size(), comparison.getValues().size());
-                for (Map.Entry<String, Double> entry : result.getValues().entrySet()) {
-                    Assert.assertEquals(entry.getValue(), comparison.getValues().get(entry.getKey()), 0.00000001);
+                if (checkForEqualVariables) {
+                    for (Map.Entry<String, Double> entry : result.getValues().entrySet()) {
+                        Assert.assertEquals("Expected " + entry.getKey() + " to be equal in both results.", entry.getValue(), comparison.getValues().get(entry.getKey()), 0.00000001);
+                    }
                 }
             }
         }

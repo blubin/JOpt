@@ -208,7 +208,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
     }
 
     private List<Variable> getActiveVars(IMIP mip) {
-        List<Variable> ret = new ArrayList<Variable>(mip.getNumVars());
+        List<Variable> ret = new ArrayList<>(mip.getNumVars());
         for (Variable v : mip.getVars().values()) {
             if (!v.ignore()) {
                 ret.add(v);
@@ -239,7 +239,13 @@ public class LPSolveMIPSolver implements IMIPSolver {
         List<LinearTerm> ret = new ArrayList<>();
         Map<Variable, LinearTerm> varToTerm = new HashMap<>();
         for (LinearTerm t : c.getLinearTerms()) {
-            varToTerm.put(mip.getVar(t.getVarName()), t);
+            if (varToTerm.containsKey(mip.getVar(t.getVarName()))) {
+                varToTerm.put(mip.getVar(t.getVarName()),
+                        new LinearTerm(varToTerm.get(mip.getVar(t.getVarName())).getCoefficient()
+                                + t.getCoefficient(), mip.getVar(t.getVarName())));
+            } else {
+                varToTerm.put(mip.getVar(t.getVarName()), t);
+            }
         }
         for (int i = 0; i < activeVars.size(); i++) {
             ret.add(varToTerm.get(activeVars.get(i)));

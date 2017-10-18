@@ -30,7 +30,7 @@ public class ComplexExample {
      * @param transportUnitsAreFractional: always true until part D
      * @return linear/integer problem solution
      */
-    public void buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional, SolverClient client) {
+    public void buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
 
         mip = new MIP();
 
@@ -97,7 +97,6 @@ public class ComplexExample {
         return client.solve(mip);
     }
 
-    @Test
     public static void main(String[] args) {
 
         ComplexExample example = new ComplexExample();
@@ -115,7 +114,7 @@ public class ComplexExample {
         };
         double[] extraCosts = new double[]{3.5, 0.5};
 
-        example.buildMIP(factories, customers, costs, fixedCosts, extraCosts, true, new SolverClient());
+        example.buildMIP(factories, customers, costs, fixedCosts, extraCosts, true);
 
         System.out.println(example.getMIP());
         System.out.println(example.solve(new SolverClient()));
@@ -136,7 +135,7 @@ public class ComplexExample {
         };
         double[] extraCosts = new double[]{3.5, 0.5};
 
-        example.buildMIP(factories, customers, costs, fixedCosts, extraCosts, true, client);
+        example.buildMIP(factories, customers, costs, fixedCosts, extraCosts, true);
 
         return example.solve(client);
     }

@@ -57,7 +57,7 @@ import edu.harvard.econcs.util.TypedProperties;
  * @version $Revision: 1.11 $ on $Date: 2010/10/28 00:11:26 $
  * @since Apr 12, 2004
  **/
-public class SolverClient implements IMIPSolver{
+public class SolverClient implements IMIPSolver {
 	private static String DEFAULT_SOLVER = "edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
 	
 	protected static Log log = new Log(SolverClient.class);
@@ -176,7 +176,7 @@ public class SolverClient implements IMIPSolver{
 		} catch (ClassNotFoundException e) {
 			throw new MIPException("Could not create local MIPSolver");
 		} catch (NoClassDefFoundError e) {
-			if (e.getMessage().contains("IloException")) {
+			if (e.getMessage().contains("ilog/")) {
 				System.err.println("Tried to solve with CPLEX; However, CPLEX was not found, falling back to LP Solve.");
 				return getLocalSolver("edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver");
 			} else {
