@@ -91,6 +91,15 @@ public enum CPLEXInstanceManager {
                     LOGGER.warn("Could not get CPLEX instance, giving up", ex);
                     return null;
                 }
+            } catch (UnsatisfiedLinkError e) {
+                System.err.println("\n---------------------------------------------------\n" +
+                        "Error encountered while trying to solve MIP with CPLEX:\n" +
+                        "The native libraries were not found in the java library path.\n" +
+                        "Installing CPLEX should have set the environment variables right. Did you install CPLEX correctly?\n" +
+                        "To fix it, let your PATH (-> Windows) or LD_LIBRARY_PATH (-> Unix) environment variable point to:\n" +
+                        "\t<cplex_install_directory>/cplex/bin/<your_platform>\n" +
+                        "---------------------------------------------------\n");
+                throw e;
             }
         }
         return null;

@@ -84,6 +84,9 @@ public class SolverClient implements IMIPSolver {
 	 * create a client using the given solver explicitly.
 	 **/
 	public SolverClient(IMIPSolver solver) {
+		// TODO: Handle explicit solver creation
+		// ATM it fails too early if the solver is not available.
+		// Better: Have enum for different solvers, let this method handle the exceptions if the jar is not available.
 		this.solver = solver;
 	}
 		
@@ -177,7 +180,9 @@ public class SolverClient implements IMIPSolver {
 			throw new MIPException("Could not create local MIPSolver");
 		} catch (NoClassDefFoundError e) {
 			if (e.getMessage().contains("ilog/")) {
-				System.err.println("Tried to solve with CPLEX; However, CPLEX was not found, falling back to LP Solve.");
+				System.err.println("No default solver specified, and attempt to use default solver (CPLEX) failed:\n" +
+						"\tThe cplex.jar file was not found. Continuing with LP Solve, which is condiderably less performant.\n" +
+						"\tIf you want to use CPLEX, make sure you include cplex.jar as a dependency.");
 				return getLocalSolver("edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver");
 			} else {
 				throw e;

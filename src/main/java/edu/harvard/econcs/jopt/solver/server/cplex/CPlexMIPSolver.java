@@ -46,7 +46,6 @@ import ilog.cplex.IloCplex.BooleanParam;
 import ilog.cplex.IloCplex.ConflictStatus;
 import ilog.cplex.IloCplex.DoubleParam;
 import ilog.cplex.IloCplex.StringParam;
-import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

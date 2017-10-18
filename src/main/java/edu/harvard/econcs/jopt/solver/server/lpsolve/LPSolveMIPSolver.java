@@ -32,7 +32,6 @@ package edu.harvard.econcs.jopt.solver.server.lpsolve;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -66,13 +65,6 @@ public class LPSolveMIPSolver implements IMIPSolver {
     private static final long TIME_LIMIT = 60000;
 
     private static boolean debug = false;
-
-    {
-        // Load the necessary System libraries:
-        // java.library.path must point to lib directory...
-        System.loadLibrary("lpsolve55");
-        System.loadLibrary("lpsolve55j");
-    }
 
     public IMIPResult solve(IMIP mip) throws MIPException {
         try {
@@ -204,6 +196,22 @@ public class LPSolveMIPSolver implements IMIPSolver {
             return ret;
         } catch (LpSolveException e) {
             throw new MIPException("Exception solving MIP: " + e);
+        } catch (UnsatisfiedLinkError e) {
+            System.err.println("---------------------------------------------------\n" +
+                    "Error encountered while trying to solve MIP with LPSolve:\n" +
+                    "The native libraries were not found in the java library path.\n" +
+                    "If you're sure you want to use LPSolve, follow these instructions to get it running:\n" +
+                    "\t1.\tDownload the lp_solve_5.5.2.0_dev_* package that fits your platform from\n" +
+                    "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/\n" +
+                    "\t2.\tDownload the java interface for LPSolve from\n" +
+                    "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/lp_solve_5.5.2.0_java.zip/download\n" +
+                    "\t3.\tExtract both packages and place the dev-package (from 1.) anywhere where the\n" +
+                    "\t\t\tPATH (-> Windows) or LD_LIBRARY_PATH (-> Unix) environment variable is pointing at\n" +
+                    "\t\t\t(or make it point there).\n" +
+                    "\t4.\tPlace the corresponding interface file (ending in j, e.g. lpsolve55j.dll for Windows)\n" +
+                    "\t\t\tfrom the /lib directory of the java interface (from 2.) into the same directory as the other package.\n" +
+                    "---------------------------------------------------");
+            throw e;
         }
     }
 
