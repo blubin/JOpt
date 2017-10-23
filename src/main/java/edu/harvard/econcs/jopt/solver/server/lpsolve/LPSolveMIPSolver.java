@@ -319,11 +319,11 @@ public class LPSolveMIPSolver implements IMIPSolver {
             }
         } else if (SystemUtils.IS_OS_UNIX) {
             if (SystemUtils.OS_ARCH.contains("64")) {
-                NativeUtils.loadLibraryFromJar("lib/64_liblpsolve55.so", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("lib/64_liblpsolve55j.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55j.so", lpSolveTempDir);
             } else {
-                NativeUtils.loadLibraryFromJar("lib/32_liblpsolve55.so", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("lib/32_liblpsolve55j.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55j.so", lpSolveTempDir);
             }
         }
     }
