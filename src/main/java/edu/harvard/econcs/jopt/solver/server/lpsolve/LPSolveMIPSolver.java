@@ -30,11 +30,13 @@
  */
 package edu.harvard.econcs.jopt.solver.server.lpsolve;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.harvard.econcs.util.NativeUtils;
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
 import edu.harvard.econcs.jopt.solver.IMIP;
@@ -50,6 +52,7 @@ import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
+import org.apache.commons.lang3.SystemUtils;
 
 /**
  * A Class for solving MIPs based on the LPSolve solver.
@@ -59,6 +62,36 @@ import edu.harvard.econcs.jopt.solver.server.SolverServer;
  * @since Jan 4, 2005
  **/
 public class LPSolveMIPSolver implements IMIPSolver {
+
+    static {
+        try {
+            System.loadLibrary("lpsolve55j");
+        } catch (UnsatisfiedLinkError e) {
+            System.out.println("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
+            try {
+                initLocalLpSolve();
+                LpSolve.lpSolveVersion(); // A check if all links are in place
+            } catch (Exception ex) {
+                System.err.println("---------------------------------------------------\n" +
+                        "Error encountered while trying to solve MIP with LPSolve:\n" +
+                        "The native libraries were not found in the java library path," +
+                        "and providing them via the tempDir failed as well.\n" +
+                        "If you're sure you want to use LPSolve, follow these instructions to get it running:\n" +
+                        "\t1.\tDownload the lp_solve_5.5.2.0_dev_* package that fits your platform from\n" +
+                        "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/\n" +
+                        "\t2.\tDownload the java interface for LPSolve from\n" +
+                        "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/lp_solve_5.5.2.0_java.zip/download\n" +
+                        "\t3.\tExtract both packages and place the dev-package (from 1.) anywhere where the\n" +
+                        "\t\t\tPATH (-> Windows) or LD_LIBRARY_PATH (-> Unix) environment variable is pointing at\n" +
+                        "\t\t\t(or make it point there).\n" +
+                        "\t4.\tPlace the corresponding interface file (ending in j, e.g. 64_lpsolve55j.dll for Windows)\n" +
+                        "\t\t\tfrom the /lib directory of the java interface (from 2.) into the same directory as the other package.\n" +
+                        "\t5.\tRestart your IDE to freshly load the environment variables.\n" +
+                        "---------------------------------------------------");
+                throw e;
+            }
+        }
+    }
 
     // private static Log log = new Log(LPSolveMIPSolver.class);
     // private static final String fileName = "mipInstance";
@@ -196,22 +229,6 @@ public class LPSolveMIPSolver implements IMIPSolver {
             return ret;
         } catch (LpSolveException e) {
             throw new MIPException("Exception solving MIP: " + e);
-        } catch (UnsatisfiedLinkError e) {
-            System.err.println("---------------------------------------------------\n" +
-                    "Error encountered while trying to solve MIP with LPSolve:\n" +
-                    "The native libraries were not found in the java library path.\n" +
-                    "If you're sure you want to use LPSolve, follow these instructions to get it running:\n" +
-                    "\t1.\tDownload the lp_solve_5.5.2.0_dev_* package that fits your platform from\n" +
-                    "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/\n" +
-                    "\t2.\tDownload the java interface for LPSolve from\n" +
-                    "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/lp_solve_5.5.2.0_java.zip/download\n" +
-                    "\t3.\tExtract both packages and place the dev-package (from 1.) anywhere where the\n" +
-                    "\t\t\tPATH (-> Windows) or LD_LIBRARY_PATH (-> Unix) environment variable is pointing at\n" +
-                    "\t\t\t(or make it point there).\n" +
-                    "\t4.\tPlace the corresponding interface file (ending in j, e.g. lpsolve55j.dll for Windows)\n" +
-                    "\t\t\tfrom the /lib directory of the java interface (from 2.) into the same directory as the other package.\n" +
-                    "---------------------------------------------------");
-            throw e;
         }
     }
 
@@ -281,5 +298,33 @@ public class LPSolveMIPSolver implements IMIPSolver {
         }
         int port = Integer.parseInt(argv[0]);
         SolverServer.createServer(port, LPSolveMIPSolver.class);
+    }
+
+    private static void initLocalLpSolve() throws Exception {
+        // Find or create the jopt-lib-lpsolve directory in temp
+        File lpSolveTempDir = NativeUtils.createTempDir("jopt-lib-lpsolve");
+        lpSolveTempDir.deleteOnExit();
+
+        // Add this directory to the java library path
+        NativeUtils.addLibraryPath(lpSolveTempDir.getAbsolutePath());
+
+        // Add the right files to this directory
+        if (SystemUtils.IS_OS_WINDOWS) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55j.dll", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55j.dll", lpSolveTempDir);
+            }
+        } else if (SystemUtils.IS_OS_UNIX) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("lib/64_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("lib/64_liblpsolve55j.so", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("lib/32_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("lib/32_liblpsolve55j.so", lpSolveTempDir);
+            }
+        }
     }
 }
