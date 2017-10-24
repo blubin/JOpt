@@ -55,6 +55,8 @@ public class MIP implements IMIP, Serializable, Cloneable {
      * https://support.ilog.com/public/products/faq
      * .cfm?Product=CPLEX&FAQ=75&CFID=
      * 96044&CFTOKEN=40609383&jsessionid=92301560341115251663761
+     * LPSolve starts to behave inconsistently if any number is higher than 9000000,
+     * so currently this is the maximum to have a transparent solver interface for the MIP.
      **/
     public static final int MAX_VALUE = 9000000;
 
