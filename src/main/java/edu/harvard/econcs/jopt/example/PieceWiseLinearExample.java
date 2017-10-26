@@ -4,8 +4,10 @@ import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.mip.*;
-import org.junit.Test;
 
+/**
+ * @author Fabio Isler
+ */
 public class PieceWiseLinearExample {
 
     private IMIP mip;

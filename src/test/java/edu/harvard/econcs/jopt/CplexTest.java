@@ -1,13 +1,10 @@
 package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
-import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
-import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -15,24 +12,14 @@ import static org.junit.Assert.fail;
 /**
  * @author Fabio Isler
  */
-public class LPSolveTest {
-
-	@Test
-	public void compareResultsToCplex() {
-		IMIP mip = TestSuite.provideBanalExample();
-		
-	    SolverClient lpSolveSolverClient = new SolverClient(new LPSolveMIPSolver());
-	    IMIPResult lpSolveResult = lpSolveSolverClient.solve(mip);
-		SolverClient cplexSolverClient = new SolverClient(new CPlexMIPSolver());
-		IMIPResult cplexResult = cplexSolverClient.solve(mip);
-		TestSuite.compareMultipleResults(lpSolveResult, cplexResult);
-	}
+public class CplexTest {
 
 	@Test
 	public void testTimeoutBehavior() {
+	    // TODO: Find a more complex example to have a meaningful timeout
 		IMIP mip = TestSuite.provideComplexExample();
-		mip.setSolveParam(SolveParam.TIME_LIMIT, 2.0);
-        SolverClient lpSolveSolverClient = new SolverClient(new LPSolveMIPSolver());
+		mip.setSolveParam(SolveParam.TIME_LIMIT, 0.1);
+        SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
 
         try {
             lpSolveSolverClient.solve(mip);

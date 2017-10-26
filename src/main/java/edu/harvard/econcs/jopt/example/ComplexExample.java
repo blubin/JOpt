@@ -8,8 +8,10 @@ import edu.harvard.econcs.jopt.solver.mip.CompareType;
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
-import org.junit.Test;
 
+/**
+ * @author Fabio Isler
+ */
 public class ComplexExample {
 
     private IMIP mip;
@@ -30,7 +32,7 @@ public class ComplexExample {
      * @param transportUnitsAreFractional: always true until part D
      * @return linear/integer problem solution
      */
-    public void buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
+    public IMIP buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
 
         mip = new MIP();
 
@@ -91,6 +93,7 @@ public class ComplexExample {
             }
             mip.add(demand);
         }
+        return mip;
     }
 
     public IMIPResult solve(SolverClient client) {
