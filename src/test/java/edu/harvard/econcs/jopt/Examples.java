@@ -10,8 +10,7 @@ import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
 import org.junit.Test;
 
 /**
- * @author Benjamin Lubin; Last modified by $Author: blubin $
- * @version $Revision: 1.4 $ on $Date: 2013/12/04 02:54:09 $
+ * @author Fabio Isler
  */
 public class Examples {
 

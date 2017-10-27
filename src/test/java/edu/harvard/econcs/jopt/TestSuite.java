@@ -1,26 +1,29 @@
-/**
- * Copyright by Michael Weiss, weiss.michael@gmx.ch
- * <p>
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
 package edu.harvard.econcs.jopt;
 
+import edu.harvard.econcs.jopt.example.ComplexExample;
+import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
+import edu.harvard.econcs.jopt.solver.mip.*;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * @author Fabio Isler
+ */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        LPSolveTest.class,
+        SolverAccessTest.class,
         Examples.class,
-        SolverAccessTest.class
+        LPSolveTest.class,
+        CplexTest.class
 })
-
 public class TestSuite {
 
     @BeforeClass
@@ -54,4 +57,84 @@ public class TestSuite {
             }
         }
     }
+
+    public static IMIP provideBanalExample() {
+        MIP mip = new MIP();
+        Variable v = new Variable("a", VarType.INT, 0, 3);
+        mip.add(v);
+        Constraint c1 = new Constraint(CompareType.GEQ, 1);
+        c1.addTerm(new LinearTerm(1, v));
+        Constraint c2 = new Constraint(CompareType.GEQ, 2);
+        c2.addTerm(new LinearTerm(1, v));
+        Constraint c3 = new Constraint(CompareType.LEQ, 5);
+        c3.addTerm(new LinearTerm(1, v));
+        mip.add(c1);
+        mip.add(c2);
+        mip.add(c3);
+        mip.setObjectiveMax(true);
+        mip.addObjectiveTerm(1, v);
+
+        return mip;
+    }
+
+    public static IMIP provideComplexExample() {
+        int noOfFactories = 10;
+        int noOfCustomers = 7;
+
+        ArrayList<Double> alFactories = new ArrayList<>();
+        for (int i = 0; i < noOfFactories; i++) {
+            alFactories.add((double) (i % 3) + 1);
+        }
+
+        ArrayList<Double> alCustomers = new ArrayList<>();
+        for (int i = 0; i < noOfCustomers; i++) {
+            alCustomers.add((double) ((i + 5) % 4) + 1);
+        }
+
+        ArrayList<ArrayList<Double>> alCosts = new ArrayList<>();
+        ArrayList<ArrayList<Double>> alFixedCosts = new ArrayList<>();
+        for (double f : alFactories) {
+            ArrayList<Double> alC = new ArrayList<>();
+            ArrayList<Double> alF = new ArrayList<>();
+            for (double c : alCustomers) {
+                alC.add((f + c + 2) % 3 + 1);
+                alF.add((f + c + 5) % 4 + 1);
+            }
+            alCosts.add(alC);
+            alFixedCosts.add(alF);
+        }
+
+        ArrayList<Double> alExtraCosts = new ArrayList<>();
+        for (int i = 0; i < noOfFactories; i++) {
+            alExtraCosts.add((double) ((i + 2) % 4) + 1);
+        }
+
+        double[][] costs = new double[alFactories.size()][];
+        double[][] fixedCosts = new double[alFactories.size()][];
+        for (int i = 0; i < alFactories.size(); i++) {
+            costs[i] = convertDoubles(alCosts.get(i));
+            fixedCosts[i] = convertDoubles(alFixedCosts.get(i));
+        }
+
+
+
+        return new ComplexExample().buildMIP(
+                convertDoubles(alFactories),
+                convertDoubles(alCustomers),
+                costs,
+                fixedCosts,
+                convertDoubles(alExtraCosts),
+                true);
+    }
+
+    private static double[] convertDoubles(ArrayList<Double> doubles) {
+        double[] ret = new double[doubles.size()];
+        Iterator<Double> iterator = doubles.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
 }
+
+

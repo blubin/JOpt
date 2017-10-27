@@ -30,6 +30,7 @@
  */
 package edu.harvard.econcs.jopt.solver.server.cplex;
 
+import edu.harvard.econcs.jopt.solver.mip.*;
 import ilog.concert.IloConstraint;
 import ilog.concert.IloException;
 import ilog.concert.IloLQNumExpr;
@@ -67,14 +68,6 @@ import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException.Cause;
 import edu.harvard.econcs.jopt.solver.SolveParam;
-import edu.harvard.econcs.jopt.solver.mip.CompareType;
-import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.IntermediateSolution;
-import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
-import edu.harvard.econcs.jopt.solver.mip.MIPResult;
-import edu.harvard.econcs.jopt.solver.mip.QuadraticTerm;
-import edu.harvard.econcs.jopt.solver.mip.VarType;
-import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
 
 /**
@@ -258,6 +251,18 @@ public class CPlexMIPSolver implements IMIPSolver {
                 }
             }
         }
+
+        if (cplex.getCplexStatus() == IloCplex.CplexStatus.AbortTimeLim) {
+            if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
+                System.out.println("Suboptimal solution! Continuing... To reject suboptimal solutions," +
+                        "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
+            } else {
+                throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
+                        "Due to user preferences, an exception is thrown. To accept suboptimal solutions after a timeout,\n" +
+                        "set SolveParam.ACCEPT_SUBOPTIMAL to true.");
+            }
+        }
+
         Queue<IntermediateSolution> intermediateSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<IntermediateSolution>();
         intermediateSolutions.addAll(findIntermediateSolutions(cplex, vars));
 
@@ -755,10 +760,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         /**
          * Return the solution list, but first remove any entry that matches the
          * overall solution.
-         * 
-         * @param objValue
-         * @param values
-         * @return
+         *
          */
         public Queue<IntermediateSolution> getSolutionList() {
 

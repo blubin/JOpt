@@ -7,6 +7,8 @@ import edu.harvard.econcs.jopt.solver.mip.*;
 
 /**
  * An example for a MIP that includes a piecewise linear function
+ *
+ * @author Fabio Isler
  */
 public class PieceWiseLinearExample {
 

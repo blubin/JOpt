@@ -192,7 +192,16 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
             // solve the problem
             int result = solver.solve();
-            if (result != LpSolve.OPTIMAL) {
+            if (result == LpSolve.SUBOPTIMAL) {
+                if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
+                    System.out.println("Suboptimal solution! Continuing... To reject suboptimal solutions," +
+                            "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
+                } else {
+                    throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
+                            "Due to user preferences, an exception is thrown. To accept suboptimal solutions after a timeout,\n" +
+                            "set SolveParam.ACCEPT_SUBOPTIMAL to true.");
+                }
+            } else if (result != LpSolve.OPTIMAL) {
                 String problem = solver.getStatustext(result);
                 solver.deleteLp();
                 throw new MIPInfeasibleException(problem);
@@ -291,7 +300,6 @@ public class LPSolveMIPSolver implements IMIPSolver {
         }
         return ret;
     }
-
 
     private List<LinearTerm> getTerms(IMIP mip, List<Variable> activeVars, Constraint c) {
         if (!c.getQuadraticTerms().isEmpty()) {

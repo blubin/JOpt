@@ -8,10 +8,11 @@ import edu.harvard.econcs.jopt.solver.mip.CompareType;
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
-import org.junit.Test;
 
 /**
  * An example for a multi-commodity transportation model
+ *
+ * @author Fabio Isler
  */
 public class ComplexExample {
 
@@ -29,7 +30,7 @@ public class ComplexExample {
      * @param extraCosts Array containing each factories's cost per customer they serve beyond the first
      * @param transportUnitsAreFractional: Flag whether to accept fractional units to be transported
      */
-    public void buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
+    public IMIP buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
 
         mip = new MIP();
 
@@ -90,6 +91,7 @@ public class ComplexExample {
             }
             mip.add(demand);
         }
+        return mip;
     }
 
     public IMIPResult solve(SolverClient client) {

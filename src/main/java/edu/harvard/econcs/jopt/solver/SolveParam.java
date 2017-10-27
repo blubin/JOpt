@@ -40,18 +40,20 @@ import java.io.Serializable;
  * supported by your chosen backend solver, unfortunently. But we try to map
  * these settings into relevant solver settings. See each setting to see if they
  * are applicable to CPLEX, LPSOLVE, or ALLSOLVERS
- * 
+ *
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.17 $ on $Date: 2010/12/03 20:48:23 $
  * @since Apr 19, 2005
  **/
 public class SolveParam implements Serializable {
 
-  
+
     // ENUMS go here:
     // ///////////////
 
-    /** Measure timing using CPU=1, wall clock=2 [CPLEX] **/
+    /**
+     * Measure timing using CPU=1, wall clock=2 [CPLEX]
+     **/
     public static final SolveParam CLOCK_TYPE = new SolveParam(0, Integer.class, "ClockType");
 
     /**
@@ -60,7 +62,10 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam TIME_LIMIT = new SolveParam(1, Double.class, "TimeLimit");
 
-    /** Amount of barrier progress information to be displayed [CPLEX] **/
+
+    /**
+     * Amount of barrier progress information to be displayed [CPLEX]
+     **/
     public static final SolveParam BARRIER_DISPLAY = new SolveParam(2, Integer.class, "BarrierDisplay");
 
     /**
@@ -75,7 +80,9 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam MAX_OBJ_VALUE = new SolveParam(4, Double.class, "MaxObjValue");
 
-    /** Optimality Tolerance [CPLEX] **/
+    /**
+     * Optimality Tolerance [CPLEX]
+     **/
     public static final SolveParam OBJ_TOLERANCE = new SolveParam(5, Double.class, "ObjTolerance");
 
     /**
@@ -90,23 +97,29 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam RELATIVE_OBJ_GAP = new SolveParam(7, Double.class, "RelativeObjGap");
 
-    /** How close a double must be to an int to be considered an int [CPLEX] **/
+    /**
+     * How close a double must be to an int to be considered an int [CPLEX]
+     **/
     public static final SolveParam ABSOLUTE_INT_GAP = new SolveParam(8, Double.class, "AbsoluteIntGap");
 
-    /** Degree to which variables may violate their bounds [CPLEX] **/
+    /**
+     * Degree to which variables may violate their bounds [CPLEX]
+     **/
     public static final SolveParam ABSOLUTE_VAR_BOUND_GAP = new SolveParam(9, Double.class, "AbsoluteVarBoundGap");
 
-    /** Which optimization algorithm to use. [CPLEX] **/
+    /**
+     * Which optimization algorithm to use. [CPLEX]
+     **/
     public static final SolveParam LP_OPTIMIZATION_ALG = new SolveParam(10, Integer.class, "LPOptimizationAlg");
 
     /**
      * Specify what to display when solving a MIP [CPLEX]
      * <p>
-     * 
+     * <p>
      * From the Cplex 8.1 Documentation (see that documentation for better
      * context):
      * <p>
-     * 
+     * <p>
      * 0 No display<br>
      * 1 Display integer feasible solutions<br>
      * 2 Display nodes under CPX_PARAM_MIPInteger.classERVAL<br>
@@ -129,8 +142,7 @@ public class SolveParam implements Serializable {
      * for the LP root relaxation according to the 'SET SIMPLEX DISPLAY'
      * setting. A setting of 5 additionally generates entries for the LP
      * subproblems, also according to the 'SET SIMPLEX DISPLAY' setting.
-     * 
-     * **/
+     **/
     public static final SolveParam MIP_DISPLAY = new SolveParam(11, Integer.class, "MIPDisplay");
 
     /**
@@ -139,7 +151,9 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam MIP_EMPHASIS = new SolveParam(12, Integer.class, "MIPEmphasis");
 
-    /** Check starting values for feasibility? [CPLEX] **/
+    /**
+     * Check starting values for feasibility? [CPLEX]
+     **/
     public static final SolveParam CHECK_INIT_VALUE_FEASIBILITY = new SolveParam(13, Boolean.class, "CheckInitValueFeasibility");
 
     /**
@@ -152,10 +166,14 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam MAX_OBJ_THRESHOLD = new SolveParam(15, Double.class, "MaxObjThreshold");
 
-    /** Working directory for working files for the optimzer [CPLEX] **/
+    /**
+     * Working directory for working files for the optimzer [CPLEX]
+     **/
     public static final SolveParam WORK_DIR = new SolveParam(16, String.class, "WorkDir");
 
-    /** Threads to use in solving a MIP [CPLEX] **/
+    /**
+     * Threads to use in solving a MIP [CPLEX]
+     **/
     public static final SolveParam THREADS = new SolveParam(17, Integer.class, "Threads");
 
     public static final SolveParam PARALLEL_MODE = new SolveParam(18, Integer.class, "ParallelMode");
@@ -230,13 +248,19 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam CONSTRAINT_BACKOFF_LIMIT = new SolveParam(103, Double.class, "ConstraintBackoffLimit", true);
 
-    /** Should we attempt to determine conflcit set? **/
+    /**
+     * Should we attempt to determine conflcit set?
+     **/
     public static final SolveParam CALCULATE_CONFLICT_SET = new SolveParam(104, Boolean.class, "CalculateConflictSet", true);
 
-    /** Display output? **/
+    /**
+     * Display output?
+     **/
     public static final SolveParam DISPLAY_OUTPUT = new SolveParam(105, Boolean.class, "DisplayOutput", true);
 
-    /** Calculate duals? **/
+    /**
+     * Calculate duals?
+     **/
     public static final SolveParam CALC_DUALS = new SolveParam(106, Boolean.class, "CalcDuals", true);
     /**
      * 0 (default) is none 1 is callback 2 is solution pool
@@ -247,7 +271,13 @@ public class SolveParam implements Serializable {
      * spend on populating the solution pool. If missing or negative than
      * populate is not limited
      */
-    public static final SolveParam RELATIVE_POOL_SOLVE_TIME = new SolveParam(108, Double.class, "SolPoolRelSolveTime",true);
+    public static final SolveParam RELATIVE_POOL_SOLVE_TIME = new SolveParam(108, Double.class, "SolPoolRelSolveTime", true);
+
+    /**
+     * Flag whether the user wants to accept a suboptimal solution after timeout or have an Exception thrown.
+     */
+    public static final SolveParam ACCEPT_SUBOPTIMAL = new SolveParam(109, Boolean.class, "AcceptSuboptimal", true);
+
     // Other stuff below:
     // //////////////////
 
@@ -273,77 +303,82 @@ public class SolveParam implements Serializable {
     private SolveParam(int enumUID, Class type, String name) {
         this(enumUID, type, name, false);
     }
-    public Class getType(){
+
+    public Class getType() {
         return type;
     }
 
-    /** Make serialization work. **/
+    /**
+     * Make serialization work.
+     **/
     private Object readResolve() throws ObjectStreamException {
         switch (enumUID) {
-        case 0:
-            return CLOCK_TYPE;
-        case 1:
-            return TIME_LIMIT;
-        case 2:
-            return BARRIER_DISPLAY;
-        case 3:
-            return MIN_OBJ_VALUE;
-        case 4:
-            return MAX_OBJ_VALUE;
-        case 5:
-            return OBJ_TOLERANCE;
-        case 6:
-            return ABSOLUTE_OBJ_GAP;
-        case 7:
-            return RELATIVE_OBJ_GAP;
-        case 8:
-            return ABSOLUTE_INT_GAP;
-        case 9:
-            return ABSOLUTE_VAR_BOUND_GAP;
-        case 10:
-            return LP_OPTIMIZATION_ALG;
-        case 11:
-            return MIP_DISPLAY;
-        case 12:
-            return MIP_EMPHASIS;
-        case 13:
-            return CHECK_INIT_VALUE_FEASIBILITY;
-        case 14:
-            return MIN_OBJ_THRESHOLD;
-        case 15:
-            return MAX_OBJ_THRESHOLD;
-        case 16:
-            return WORK_DIR;
-        case 17:
-            return THREADS;
-        case 18:
-            return PARALLEL_MODE;
-        case 19:
-            return MARKOWITZ_TOLERANCE;
-        case 20:
-            return SOLUTION_POOL_INTENSITY;
-        case 21:
-            return SOLUTION_POOL_CAPACITY;
-        case 22:
-            return POPULATE_LIMIT;
-        case 23:
-            return SOLUTION_POOL_REPLACEMENT;
-        case 101:
-            return PROBLEM_FILE;
-        case 102:
-            return ZERO_MISSING_PROPOSED;
-        case 103:
-            return CONSTRAINT_BACKOFF_LIMIT;
-        case 104:
-            return CALCULATE_CONFLICT_SET;
-        case 105:
-            return DISPLAY_OUTPUT;
-        case 106:
-            return CALC_DUALS;
-        case 107:
-            return SOLUTION_POOL_MODE;
-        case 108:
-            return RELATIVE_POOL_SOLVE_TIME;
+            case 0:
+                return CLOCK_TYPE;
+            case 1:
+                return TIME_LIMIT;
+            case 2:
+                return BARRIER_DISPLAY;
+            case 3:
+                return MIN_OBJ_VALUE;
+            case 4:
+                return MAX_OBJ_VALUE;
+            case 5:
+                return OBJ_TOLERANCE;
+            case 6:
+                return ABSOLUTE_OBJ_GAP;
+            case 7:
+                return RELATIVE_OBJ_GAP;
+            case 8:
+                return ABSOLUTE_INT_GAP;
+            case 9:
+                return ABSOLUTE_VAR_BOUND_GAP;
+            case 10:
+                return LP_OPTIMIZATION_ALG;
+            case 11:
+                return MIP_DISPLAY;
+            case 12:
+                return MIP_EMPHASIS;
+            case 13:
+                return CHECK_INIT_VALUE_FEASIBILITY;
+            case 14:
+                return MIN_OBJ_THRESHOLD;
+            case 15:
+                return MAX_OBJ_THRESHOLD;
+            case 16:
+                return WORK_DIR;
+            case 17:
+                return THREADS;
+            case 18:
+                return PARALLEL_MODE;
+            case 19:
+                return MARKOWITZ_TOLERANCE;
+            case 20:
+                return SOLUTION_POOL_INTENSITY;
+            case 21:
+                return SOLUTION_POOL_CAPACITY;
+            case 22:
+                return POPULATE_LIMIT;
+            case 23:
+                return SOLUTION_POOL_REPLACEMENT;
+            case 101:
+                return PROBLEM_FILE;
+            case 102:
+                return ZERO_MISSING_PROPOSED;
+            case 103:
+                return CONSTRAINT_BACKOFF_LIMIT;
+            case 104:
+                return CALCULATE_CONFLICT_SET;
+            case 105:
+                return DISPLAY_OUTPUT;
+            case 106:
+                return CALC_DUALS;
+            case 107:
+                return SOLUTION_POOL_MODE;
+            case 108:
+                return RELATIVE_POOL_SOLVE_TIME;
+            case 109:
+                return ACCEPT_SUBOPTIMAL;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);
