@@ -58,6 +58,8 @@ import org.apache.commons.lang3.SystemUtils;
  **/
 public class LPSolveMIPSolver implements IMIPSolver {
 
+    private boolean isCapped = false;
+
     static {
         try {
             System.loadLibrary("lpsolve55j");
@@ -100,6 +102,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
     private static boolean debug = false;
 
     public IMIPResult solve(IMIP mip) throws MIPException {
+        isCapped = false;
         try {
             Map<String, LinearTerm> objTerms = getObjTerms(mip);
             List<Variable> activeVars = getActiveVars(mip);
@@ -182,6 +185,11 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
             // solver.setDebug(debug);
 
+            if (isCapped) {
+                System.out.println("Warning: Some values have been capped to +/- " + LPSOLVE_MAX_VALUE + " because " +
+                        "LPSolve can't handle numbers that are higher.");
+            }
+
             // solve the problem
             int result = solver.solve();
             if (result != LpSolve.OPTIMAL) {
@@ -235,9 +243,8 @@ public class LPSolveMIPSolver implements IMIPSolver {
     private double boundAfterCapping(Variable v, boolean isLowerBound) {
         double bound = isLowerBound ? v.getLowerBound() : v.getUpperBound();
         if (Math.abs(bound) > LPSOLVE_MAX_VALUE) {
+            isCapped = true;
             bound = isLowerBound ? -LPSOLVE_MAX_VALUE : LPSOLVE_MAX_VALUE;
-            warnAboutCapping("the " + (isLowerBound ? "lower" : "upper") + " bound of " + v.getName(),
-                    isLowerBound ? -LPSOLVE_MAX_VALUE : LPSOLVE_MAX_VALUE);
             if (v.getLowerBound() > v.getUpperBound()) {
                 throw new MIPException("LPSolve can't handle numbers higher than " + LPSOLVE_MAX_VALUE + ". " +
                         "After capping the " + (isLowerBound ? "lower" : "upper") + " bound of variable " + v.getName()
@@ -251,19 +258,14 @@ public class LPSolveMIPSolver implements IMIPSolver {
         if (t == null) {
             return 0;
         } else if (t.getCoefficient() > LPSOLVE_MAX_VALUE) {
-            warnAboutCapping(t.getVarName(), LPSOLVE_MAX_VALUE);
+            isCapped = true;
             return LPSOLVE_MAX_VALUE;
         } else if (t.getCoefficient() < -LPSOLVE_MAX_VALUE) {
-            warnAboutCapping(t.getVarName(), -LPSOLVE_MAX_VALUE);
+            isCapped = true;
             return -LPSOLVE_MAX_VALUE;
         } else {
             return t.getCoefficient();
         }
-    }
-
-    private void warnAboutCapping(String name, int amount) {
-        System.out.println("Warning: " + name + " has been capped to " + amount + " because LPSolve can't" +
-                "handle numbers that are higher.");
     }
 
     private List<Variable> getActiveVars(IMIP mip) {
