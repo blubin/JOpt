@@ -22,9 +22,8 @@
     <developers>
         <developer>
             <name>Benjamin Lubin</name>
-            <!-- TODO: Are these the right coordinates? -->
             <email>blubin@bu.edu</email>
-            <url>http://questromapps.bu.edu/mgmt_new/profiles/LubinBenjamin.html</url>
+            <url>http://people.bu.edu/blubin</url>
         </developer>
         <developer>
             <name>Fabio Isler</name>
