@@ -10,6 +10,8 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -76,32 +78,62 @@ public class TestSuite {
     }
 
     public static IMIP provideComplexExample() {
-        double[] factories = new double[]{3, 2, 3, 2, 3, 2, 3, 2};
-        double[] customers = new double[]{2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1};
-        double[][] costs = new double[][]{
-                {2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5},    // Costs from Factory 1
-                {0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2},  // Costs from Factory 2
-                {0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2},  // Costs from Factory 3
-                {0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2},  // Costs from Factory 4
-                {2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5},    // Costs from Factory 5
-                {0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2},  // Costs from Factory 6
-                {2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5},    // Costs from Factory 7
-                {0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2},  // Costs from Factory 8
-        };
-        double[][] fixedCosts = new double[][]{
-                {1, 2, 10, 1, 2, 2, 3, 3, 1, 4, 4, 7},    // Costs from Factory 1
-                {1, 1, 4, 2, 2, 2, 5, 3, 3, 4, 4, 4},    // Costs from Factory 2
-                {1, 1, 73, 2, 2, 2, 3, 3, 1, 4, 4, 4},    // Costs from Factory 3
-                {1, 1, 21, 2, 2, 2, 3, 3, 3, 4, 4, 4},    // Costs from Factory 4
-                {4, 4, 0, 2, 2, 3, 7, 63, 3, 1, 1, 1},    // Costs from Factory 5
-                {1, 1, 0, 2, 2, 2, 3, 3, 1, 4, 4, 4},    // Costs from Factory 6
-                {1, 1, 1, 2, 5, 2, 3, 8, 3, 2, 2, 2},    // Costs from Factory 7
-                {1, 1, 1, 2, 2, 2, 43, 6, 3, 4, 4, 4},    // Costs from Factory 8
-        };
-        double[] extraCosts = new double[]{3.5, 0.5, 1, 4, 2, 3.5, 3, 2.5};
+        int noOfFactories = 10;
+        int noOfCustomers = 7;
 
-        return new ComplexExample().buildMIP(factories, customers, costs, fixedCosts, extraCosts, true);
+        ArrayList<Double> alFactories = new ArrayList<>();
+        for (int i = 0; i < noOfFactories; i++) {
+            alFactories.add((double) (i % 3) + 1);
+        }
 
+        ArrayList<Double> alCustomers = new ArrayList<>();
+        for (int i = 0; i < noOfCustomers; i++) {
+            alCustomers.add((double) ((i + 5) % 4) + 1);
+        }
+
+        ArrayList<ArrayList<Double>> alCosts = new ArrayList<>();
+        ArrayList<ArrayList<Double>> alFixedCosts = new ArrayList<>();
+        for (double f : alFactories) {
+            ArrayList<Double> alC = new ArrayList<>();
+            ArrayList<Double> alF = new ArrayList<>();
+            for (double c : alCustomers) {
+                alC.add((f + c + 2) % 3 + 1);
+                alF.add((f + c + 5) % 4 + 1);
+            }
+            alCosts.add(alC);
+            alFixedCosts.add(alF);
+        }
+
+        ArrayList<Double> alExtraCosts = new ArrayList<>();
+        for (int i = 0; i < noOfFactories; i++) {
+            alExtraCosts.add((double) ((i + 2) % 4) + 1);
+        }
+
+        double[][] costs = new double[alFactories.size()][];
+        double[][] fixedCosts = new double[alFactories.size()][];
+        for (int i = 0; i < alFactories.size(); i++) {
+            costs[i] = convertDoubles(alCosts.get(i));
+            fixedCosts[i] = convertDoubles(alFixedCosts.get(i));
+        }
+
+
+
+        return new ComplexExample().buildMIP(
+                convertDoubles(alFactories),
+                convertDoubles(alCustomers),
+                costs,
+                fixedCosts,
+                convertDoubles(alExtraCosts),
+                true);
+    }
+
+    private static double[] convertDoubles(ArrayList<Double> doubles) {
+        double[] ret = new double[doubles.size()];
+        Iterator<Double> iterator = doubles.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
     }
 }
 
