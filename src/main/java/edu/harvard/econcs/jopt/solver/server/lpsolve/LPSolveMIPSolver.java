@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.harvard.econcs.jopt.solver.mip.*;
 import edu.harvard.econcs.util.NativeUtils;
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
@@ -45,18 +46,12 @@ import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
-import edu.harvard.econcs.jopt.solver.mip.CompareType;
-import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.MIPResult;
-import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
-import edu.harvard.econcs.jopt.solver.mip.VarType;
-import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
 import org.apache.commons.lang3.SystemUtils;
 
 /**
  * A Class for solving MIPs based on the LPSolve solver.
- * 
+ *
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.10 $ on $Date: 2013/12/04 02:18:20 $
  * @since Jan 4, 2005
@@ -96,6 +91,11 @@ public class LPSolveMIPSolver implements IMIPSolver {
     // private static Log log = new Log(LPSolveMIPSolver.class);
     // private static final String fileName = "mipInstance";
     private static final long TIME_LIMIT = 60000;
+
+    /**
+     * LPSolve starts to behave inconsistently if any number is higher than 9000000.
+     */
+    private static final int LPSOLVE_MAX_VALUE = 9000000;
 
     private static boolean debug = false;
 
@@ -141,7 +141,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
             for (int i = 0; i < activeVars.size(); i++) {
                 Variable v = activeVars.get(i);
                 LinearTerm t = objTerms.get(v.getName());
-                obj[i + 1] = t == null ? 0 : t.getCoefficient();
+                obj[i + 1] = valueAfterCapping(t);
                 solver.setColName(i + 1, v.getName());
             }
             solver.setObjFn(obj);
@@ -154,10 +154,10 @@ public class LPSolveMIPSolver implements IMIPSolver {
                     solver.setBinary(i + 1, true);
                 }
                 if (t == VarType.DOUBLE) {
-                    solver.setBounds(i + 1, v.getLowerBound(), v.getUpperBound());
+                    solver.setBounds(i + 1, boundAfterCapping(v, true), boundAfterCapping(v, false));
                 }
                 if (t == VarType.INT) {
-                    solver.setBounds(i + 1, v.getLowerBound(), v.getUpperBound());
+                    solver.setBounds(i + 1, boundAfterCapping(v, true), boundAfterCapping(v, false));
                     solver.setInt(i + 1, true);
                 }
             }
@@ -167,9 +167,9 @@ public class LPSolveMIPSolver implements IMIPSolver {
             for (Constraint c : constraints) {
                 List<LinearTerm> terms = getTerms(mip, activeVars, c);
                 double[] row = new double[activeVars.size() + 1];
-                for (int j = 0; j < activeVars.size(); j++) {
-                    LinearTerm t = terms.get(j);
-                    row[j + 1] = t == null ? 0 : t.getCoefficient();
+                for (int i = 0; i < activeVars.size(); i++) {
+                    LinearTerm t = terms.get(i);
+                    row[i + 1] = valueAfterCapping(t);
                 }
                 solver.addConstraint(row, getType(c.getType()), c.getConstant());
                 // solver.setRowName(i+1, c.toString());
@@ -230,6 +230,40 @@ public class LPSolveMIPSolver implements IMIPSolver {
         } catch (LpSolveException e) {
             throw new MIPException("Exception solving MIP: " + e);
         }
+    }
+
+    private double boundAfterCapping(Variable v, boolean isLowerBound) {
+        double bound = isLowerBound ? v.getLowerBound() : v.getUpperBound();
+        if (Math.abs(bound) > LPSOLVE_MAX_VALUE) {
+            bound = isLowerBound ? -LPSOLVE_MAX_VALUE : LPSOLVE_MAX_VALUE;
+            warnAboutCapping("the " + (isLowerBound ? "lower" : "upper") + " bound of " + v.getName(),
+                    isLowerBound ? -LPSOLVE_MAX_VALUE : LPSOLVE_MAX_VALUE);
+            if (v.getLowerBound() > v.getUpperBound()) {
+                throw new MIPException("LPSolve can't handle numbers higher than " + LPSOLVE_MAX_VALUE + ". " +
+                        "After capping the " + (isLowerBound ? "lower" : "upper") + " bound of variable " + v.getName()
+                        + " the lower bound was " + "higher than the upper bound, which makes the MIP not solvable.");
+            }
+        }
+        return bound;
+    }
+
+    private double valueAfterCapping(LinearTerm t) {
+        if (t == null) {
+            return 0;
+        } else if (t.getCoefficient() > LPSOLVE_MAX_VALUE) {
+            warnAboutCapping(t.getVarName(), LPSOLVE_MAX_VALUE);
+            return LPSOLVE_MAX_VALUE;
+        } else if (t.getCoefficient() < -LPSOLVE_MAX_VALUE) {
+            warnAboutCapping(t.getVarName(), -LPSOLVE_MAX_VALUE);
+            return -LPSOLVE_MAX_VALUE;
+        } else {
+            return t.getCoefficient();
+        }
+    }
+
+    private void warnAboutCapping(String name, int amount) {
+        System.out.println("Warning: " + name + " has been capped to " + amount + " because LPSolve can't" +
+                "handle numbers that are higher.");
     }
 
     private List<Variable> getActiveVars(IMIP mip) {
