@@ -10,6 +10,8 @@ import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 
 /**
+ * An example for a multi-commodity transportation model
+ *
  * @author Fabio Isler
  */
 public class ComplexExample {
@@ -20,17 +22,13 @@ public class ComplexExample {
         return mip;
     }
 
-
     /**
-     * Returns the optimal flow
-     *
-     * @param factories:                   vector containing each factory's availability
-     * @param customers:                   vector containing each customer's demand
-     * @param costs
-     * @param fixedCosts
-     * @param extraCosts
-     * @param transportUnitsAreFractional: always true until part D
-     * @return linear/integer problem solution
+     * @param factories Array containing each factory's availability
+     * @param customers Array containing each customer's demand
+     * @param costs 2D-Array containing costs for the transportation from factory i to customer j
+     * @param fixedCosts 2D-Array containing the fixed costs if at least one unit is shipped from factory i to customer j
+     * @param extraCosts Array containing each factories's cost per customer they serve beyond the first
+     * @param transportUnitsAreFractional: Flag whether to accept fractional units to be transported
      */
     public IMIP buildMIP(double[] factories, double[] customers, double[][] costs, double[][] fixedCosts, double[] extraCosts, boolean transportUnitsAreFractional) {
 
