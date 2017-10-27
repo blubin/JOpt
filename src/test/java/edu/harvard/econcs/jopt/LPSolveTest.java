@@ -28,7 +28,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.test;
+package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
@@ -39,16 +39,19 @@ import edu.harvard.econcs.jopt.solver.mip.MIP;
 import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
+import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.4 $ on $Date: 2013/12/04 02:54:09 $
  */
 public class LPSolveTest {
-	
-	
-	public static void main(String[] args) {
+
+	@Test
+	public void compareSolverResults() {
 		IMIP mip = new MIP();
 		Variable v = new Variable("a", VarType.INT, 0, 3);
 		mip.add(v);
@@ -64,8 +67,11 @@ public class LPSolveTest {
 		mip.setObjectiveMax(true);
 		mip.addObjectiveTerm(1, v);
 		
-	    SolverClient solverClient = new SolverClient(new LPSolveMIPSolver());
-	    IMIPResult result = solverClient.solve(mip);
-	    System.out.println(result);
+	    SolverClient lpSolveSolverClient = new SolverClient(new LPSolveMIPSolver());
+	    IMIPResult lpSolveResult = lpSolveSolverClient.solve(mip);
+		SolverClient cplexSolverClient = new SolverClient(new CPlexMIPSolver());
+		IMIPResult cplexResult = cplexSolverClient.solve(mip);
+	    Assert.assertEquals(lpSolveResult.getObjectiveValue(), cplexResult.getObjectiveValue(), 0);
+	    Assert.assertEquals(lpSolveResult.getValues(), cplexResult.getValues());
 	}
 }

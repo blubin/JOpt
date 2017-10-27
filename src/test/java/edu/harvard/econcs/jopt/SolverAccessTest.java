@@ -28,34 +28,29 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.test;
+package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
-import edu.harvard.econcs.jopt.solver.SolveParam;
+import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
-import edu.harvard.econcs.jopt.solver.mip.CompareType;
-import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.MIP;
-import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
-import edu.harvard.econcs.jopt.solver.mip.VarType;
-import edu.harvard.econcs.jopt.solver.mip.Variable;
+import edu.harvard.econcs.jopt.solver.mip.*;
+import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
+import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * @author Benjamin Lubin; Last modified by $Author: blubin $
- * @version $Revision: 1.7 $ on $Date: 2013/12/04 02:54:09 $
- */
-public class IISTest {
-	
-	 
-	public static void main(String[] args) {
+public class SolverAccessTest {
+
+	@Test
+	public void solverAccessTest() {
 		IMIP mip = new MIP();
-		Variable v = new Variable("a", VarType.INT, 0, 2);
+		Variable v = new Variable("a", VarType.INT, 0, 3);
 		mip.add(v);
 		Constraint c1 = new Constraint(CompareType.GEQ, 1);
 		c1.addTerm(new LinearTerm(1, v));
 		Constraint c2 = new Constraint(CompareType.GEQ, 2);
 		c2.addTerm(new LinearTerm(1, v));
-		Constraint c3 = new Constraint(CompareType.LEQ, 1);
+		Constraint c3 = new Constraint(CompareType.LEQ, 5);
 		c3.addTerm(new LinearTerm(1, v));
 		mip.add(c1);
 		mip.add(c2);
@@ -63,9 +58,7 @@ public class IISTest {
 		mip.setObjectiveMax(true);
 		mip.addObjectiveTerm(1, v);
 		
-		mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
-		
-	    SolverClient solverClient = new SolverClient("econcs.eecs.harvard.edu", 2000);
-	    System.out.println(solverClient.solve(mip));
+	    SolverClient client = new SolverClient();
+	    IMIPResult result = client.solve(mip);
 	}
 }

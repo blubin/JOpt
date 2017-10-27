@@ -57,10 +57,8 @@ import edu.harvard.econcs.util.TypedProperties;
  * @version $Revision: 1.11 $ on $Date: 2010/10/28 00:11:26 $
  * @since Apr 12, 2004
  **/
-public class SolverClient implements IMIPSolver{
-	private static String DEFAULT_SOLVER = 
-		//"edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver";
-		"edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
+public class SolverClient implements IMIPSolver {
+	private static String DEFAULT_SOLVER = "edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
 	
 	protected static Log log = new Log(SolverClient.class);
 	protected IMIPSolver solver;
@@ -86,6 +84,9 @@ public class SolverClient implements IMIPSolver{
 	 * create a client using the given solver explicitly.
 	 **/
 	public SolverClient(IMIPSolver solver) {
+		// TODO: Handle explicit solver creation
+		// ATM it fails too early if the solver is not available.
+		// Better: Have enum for different solvers, let this method handle the exceptions if the jar is not available.
 		this.solver = solver;
 	}
 		
@@ -143,12 +144,10 @@ public class SolverClient implements IMIPSolver{
 			if(log.isTraceEnabled()) {
 				log.trace("Finished de-serialiation in " + time + " millis.");
 			}
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			throw new MIPException("Serialization error", e);
-		} catch (ClassNotFoundException e) {
-			throw new MIPException("Serialization error", e);			
 		}
-		
+
 		// For scalability experiment
 		//long time = System.currentTimeMillis();
 		IMIPResult ret = solver.solve(mipObj);
@@ -174,18 +173,25 @@ public class SolverClient implements IMIPSolver{
 	 * Get a local solver
 	 */
 	protected static IMIPSolver getLocalSolver(String className) {
-		Class cl = null;
+		Class cl;
 		try {
 			cl = Class.forName(className);
 		} catch (ClassNotFoundException e) {
 			throw new MIPException("Could not create local MIPSolver");
+		} catch (NoClassDefFoundError e) {
+			if (e.getMessage().contains("ilog/")) {
+				System.err.println("No default solver specified, and attempt to use default solver (CPLEX) failed:\n" +
+						"\tThe cplex.jar file was not found. Continuing with LP Solve, which is condiderably less performant.\n" +
+						"\tIf you want to use CPLEX, make sure you include cplex.jar as a dependency.");
+				return getLocalSolver("edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver");
+			} else {
+				throw e;
+			}
 		}
 		IMIPSolver s;
 		try {
 			s = (IMIPSolver)cl.newInstance();
-		} catch (InstantiationException e1) {
-			throw new MIPException("Could not create local CPlexMIPSolver");
-		} catch (IllegalAccessException e1) {
+		} catch (InstantiationException | IllegalAccessException e1) {
 			throw new MIPException("Could not create local CPlexMIPSolver");
 		}
 		return s;

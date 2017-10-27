@@ -46,7 +46,6 @@ import ilog.cplex.IloCplex.BooleanParam;
 import ilog.cplex.IloCplex.ConflictStatus;
 import ilog.cplex.IloCplex.DoubleParam;
 import ilog.cplex.IloCplex.StringParam;
-import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -335,7 +334,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                 numberOfBooleanAndIntVariables++;
             }
             IloNumVar numVar = cplex.numVar(var.getLowerBound(), var.getUpperBound(), varType, var.getName());
-            assert (numVar.getLB() >= 0);
             vars.put(var.getName(), numVar);
         }
         cplex.add(vars.values().toArray(new IloNumVar[vars.size()]));

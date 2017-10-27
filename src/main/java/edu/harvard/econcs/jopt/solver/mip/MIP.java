@@ -512,7 +512,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     // ///////////////////
 
     /**
-     * Throws exeption if n is greater than MIP.MAX_VALUE
+     * Throws exception if n is greater than MIP.MAX_VALUE
      *
      * @param n
      */
