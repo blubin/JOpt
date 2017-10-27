@@ -30,25 +30,24 @@
  */
 package edu.harvard.econcs.jopt.solver.server.lpsolve;
 
-import edu.harvard.econcs.jopt.solver.mip.*;
-import edu.harvard.econcs.jopt.solver.server.SolverServer;
-import edu.harvard.econcs.util.NativeUtils;
-import lpsolve.LpSolve;
-import lpsolve.LpSolveException;
-import org.apache.commons.lang3.SystemUtils;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.harvard.econcs.jopt.solver.mip.*;
+import edu.harvard.econcs.util.NativeUtils;
+import lpsolve.LpSolve;
+import lpsolve.LpSolveException;
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
+import edu.harvard.econcs.jopt.solver.server.SolverServer;
+import org.apache.commons.lang3.SystemUtils;
 
 /**
  * A Class for solving MIPs based on the LPSolve solver.
@@ -59,28 +58,17 @@ import edu.harvard.econcs.jopt.solver.SolveParam;
  **/
 public class LPSolveMIPSolver implements IMIPSolver {
 
-    /**
-     * LPSolve starts to behave inconsistently if any number is higher than 9000000.
-     */
-    private static final int LPSOLVE_MAX_VALUE = 9000000;
-
-    private static final long TIME_LIMIT = 60000;
-
-    private static boolean debug = false;
-
     private boolean isCapped = false;
 
     static {
         try {
             System.loadLibrary("lpsolve55j");
         } catch (UnsatisfiedLinkError e) {
-            System.out.print("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
+            System.out.println("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
             try {
                 initLocalLpSolve();
                 LpSolve.lpSolveVersion(); // A check if all links are in place
-                System.out.println("Succeeded!");
             } catch (Exception ex) {
-                System.err.println("Failed.");
                 System.err.println("---------------------------------------------------\n" +
                         "Error encountered while trying to solve MIP with LPSolve:\n" +
                         "The native libraries were not found in the java library path," +
@@ -102,42 +90,16 @@ public class LPSolveMIPSolver implements IMIPSolver {
         }
     }
 
-    public static void main(String argv[]) {
-        if (argv.length != 1) {
-            System.err.println("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
-            System.exit(1);
-        }
-        int port = Integer.parseInt(argv[0]);
-        SolverServer.createServer(port, LPSolveMIPSolver.class);
-    }
+    // private static Log log = new Log(LPSolveMIPSolver.class);
+    // private static final String fileName = "mipInstance";
+    private static final long TIME_LIMIT = 60000;
 
-    private static void initLocalLpSolve() throws Exception {
-        // Find or create the jopt-lib-lpsolve directory in temp
-        File lpSolveTempDir = NativeUtils.createTempDir("jopt-lib-lpsolve");
-        lpSolveTempDir.deleteOnExit();
+    /**
+     * LPSolve starts to behave inconsistently if any number is higher than 9000000.
+     */
+    private static final int LPSOLVE_MAX_VALUE = 9000000;
 
-        // Add this directory to the java library path
-        NativeUtils.addLibraryPath(lpSolveTempDir.getAbsolutePath());
-
-        // Add the right files to this directory
-        if (SystemUtils.IS_OS_WINDOWS) {
-            if (SystemUtils.OS_ARCH.contains("64")) {
-                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55.dll", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55j.dll", lpSolveTempDir);
-            } else {
-                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55.dll", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55j.dll", lpSolveTempDir);
-            }
-        } else if (SystemUtils.IS_OS_UNIX) {
-            if (SystemUtils.OS_ARCH.contains("64")) {
-                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55.so", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55j.so", lpSolveTempDir);
-            } else {
-                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55.so", lpSolveTempDir);
-                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55j.so", lpSolveTempDir);
-            }
-        }
-    }
+    private static boolean debug = false;
 
     public IMIPResult solve(IMIP mip) throws MIPException {
         isCapped = false;
@@ -371,5 +333,42 @@ public class LPSolveMIPSolver implements IMIPSolver {
             return LpSolve.LE;
         }
         throw new RuntimeException("Unknown type: " + type);
+    }
+
+    public static void main(String argv[]) {
+        if (argv.length != 1) {
+            System.err.println("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
+            System.exit(1);
+        }
+        int port = Integer.parseInt(argv[0]);
+        SolverServer.createServer(port, LPSolveMIPSolver.class);
+    }
+
+    private static void initLocalLpSolve() throws Exception {
+        // Find or create the jopt-lib-lpsolve directory in temp
+        File lpSolveTempDir = NativeUtils.createTempDir("jopt-lib-lpsolve");
+        lpSolveTempDir.deleteOnExit();
+
+        // Add this directory to the java library path
+        NativeUtils.addLibraryPath(lpSolveTempDir.getAbsolutePath());
+
+        // Add the right files to this directory
+        if (SystemUtils.IS_OS_WINDOWS) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55j.dll", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55j.dll", lpSolveTempDir);
+            }
+        } else if (SystemUtils.IS_OS_UNIX) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55j.so", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55j.so", lpSolveTempDir);
+            }
+        }
     }
 }
