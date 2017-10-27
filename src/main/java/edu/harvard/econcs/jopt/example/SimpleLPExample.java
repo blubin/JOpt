@@ -87,8 +87,6 @@ public class SimpleLPExample {
     public IMIPResult solve(SolverClient client) {
         mip.setSolveParam(SolveParam.CALC_DUALS, true);
         IMIPResult result = client.solve(mip);
-        System.out.println(result.getDual(mip.getConstraints().get(0)));
-        System.out.println(result.getDual(mip.getConstraints().get(1)));
         return result;
     }
 
