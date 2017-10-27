@@ -48,29 +48,29 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
  * X - 2Y <= 5
  * Y = 2
  * </pre>
- * 
+ *
  * @author Jeff Schneidman; Last modified by $Author: blubin $
  * @version $Revision: 1.1 $ on $Date: 2013/12/04 02:54:09 $
  * @since Dec 13, 2005
  **/
 public class SimpleLPExample {
 
-	private IMIP mip;
-    
+    private IMIP mip;
+
     public IMIP getMIP() {
-    	return mip;
+        return mip;
     }
-    
+
     public void buildMIP() {
-    	mip = new MIP();
-    	
-    	Variable x = new Variable("x", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);
+        mip = new MIP();
+
+        Variable x = new Variable("x", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);
         Variable y = new Variable("y", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);
-        
+
         mip.add(x);
         mip.add(y);
-        
-        mip.setObjectiveMax(false);
+
+        mip.setObjectiveMax(true);
         mip.addObjectiveTerm(2, x);
         mip.addObjectiveTerm(2, y);
 
@@ -81,22 +81,22 @@ public class SimpleLPExample {
 
         Constraint c2 = new Constraint(CompareType.EQ, 2);
         c2.addTerm(1, y);
-        mip.add(c2);        
+        mip.add(c2);
     }
-    
+
     public IMIPResult solve(SolverClient client) {
         mip.setSolveParam(SolveParam.CALC_DUALS, true);
-    	IMIPResult result = client.solve(mip);
-    	System.out.println(result.getDual(mip.getConstraints().get(0)));
+        IMIPResult result = client.solve(mip);
+        System.out.println(result.getDual(mip.getConstraints().get(0)));
         System.out.println(result.getDual(mip.getConstraints().get(1)));
         return result;
     }
 
     public static void main(String[] argv) {
-    	SimpleLPExample example = new SimpleLPExample();
-    	example.buildMIP();
-    	System.out.println(example.getMIP());
-    	System.out.println(example.solve(new SolverClient()));
+        SimpleLPExample example = new SimpleLPExample();
+        example.buildMIP();
+        System.out.println(example.getMIP());
+        System.out.println(example.solve(new SolverClient()));
     }
 
     public static IMIPResult test(SolverClient client) {
