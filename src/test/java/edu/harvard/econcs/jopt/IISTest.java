@@ -28,7 +28,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.test;
+package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.SolveParam;
@@ -39,14 +39,17 @@ import edu.harvard.econcs.jopt.solver.mip.MIP;
 import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.7 $ on $Date: 2013/12/04 02:54:09 $
  */
 public class IISTest {
-	
-	 
+
+	private static final Logger logger = LogManager.getLogger(IISTest.class);
+
 	public static void main(String[] args) {
 		IMIP mip = new MIP();
 		Variable v = new Variable("a", VarType.INT, 0, 2);
@@ -66,6 +69,6 @@ public class IISTest {
 		mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
 		
 	    SolverClient solverClient = new SolverClient("econcs.eecs.harvard.edu", 2000);
-	    System.out.println(solverClient.solve(mip));
+	    logger.info(solverClient.solve(mip));
 	}
 }

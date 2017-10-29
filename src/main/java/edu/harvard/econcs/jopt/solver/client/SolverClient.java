@@ -46,8 +46,9 @@ import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.server.IRemoteMIPSolver;
 import edu.harvard.econcs.jopt.solver.server.ISolverServer;
-import edu.harvard.econcs.util.Log;
 import edu.harvard.econcs.util.TypedProperties;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Local class that can be used to solve a MIP.  Finds a remote Solver
@@ -57,12 +58,10 @@ import edu.harvard.econcs.util.TypedProperties;
  * @version $Revision: 1.11 $ on $Date: 2010/10/28 00:11:26 $
  * @since Apr 12, 2004
  **/
-public class SolverClient implements IMIPSolver{
-	private static String DEFAULT_SOLVER = 
-		//"edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver";
-		"edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
+public class SolverClient implements IMIPSolver {
+	private static String DEFAULT_SOLVER = "edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver";
 	
-	protected static Log log = new Log(SolverClient.class);
+	private static final Logger logger = LogManager.getLogger(SolverClient.class);
 	protected IMIPSolver solver;
 		
 	public SolverClient(TypedProperties props) {
@@ -86,6 +85,9 @@ public class SolverClient implements IMIPSolver{
 	 * create a client using the given solver explicitly.
 	 **/
 	public SolverClient(IMIPSolver solver) {
+		// TODO: Handle explicit solver creation
+		// ATM it fails too early if the solver is not available.
+		// Better: Have enum for different solvers, let this method handle the exceptions if the jar is not available.
 		this.solver = solver;
 	}
 		
@@ -114,9 +116,7 @@ public class SolverClient implements IMIPSolver{
 	 * Solve the given mip
 	 **/
 	public IMIPResult solve(IMIP mip) throws MIPException {
-		if (log.isDebugEnabled()) {
-			log.debug(mip.toString());
-		}
+		logger.debug(mip.toString());
 		return solver.solve(mip);
 	}
 		
@@ -131,24 +131,18 @@ public class SolverClient implements IMIPSolver{
 		}
 		//Otherwise, we need to deserialize for our solver:
 		ObjectInputStream ois;
-		IMIP mipObj = null;
+		IMIP mipObj;
 		try {
-			if(log.isTraceEnabled()) {
-				log.trace("Begin de-serialization of " + serializedMip.length);
-			}
+			logger.trace("Begin de-serialization of " + serializedMip.length);
 			long time = System.currentTimeMillis();
 			ois = new ObjectInputStream(new ByteArrayInputStream(serializedMip));
 			mipObj = (IMIP)ois.readObject();
 			time = System.currentTimeMillis() - time;
-			if(log.isTraceEnabled()) {
-				log.trace("Finished de-serialiation in " + time + " millis.");
-			}
-		} catch (IOException e) {
+			logger.trace("Finished de-serialiation in " + time + " millis.");
+		} catch (IOException | ClassNotFoundException e) {
 			throw new MIPException("Serialization error", e);
-		} catch (ClassNotFoundException e) {
-			throw new MIPException("Serialization error", e);			
 		}
-		
+
 		// For scalability experiment
 		//long time = System.currentTimeMillis();
 		IMIPResult ret = solver.solve(mipObj);
@@ -160,12 +154,12 @@ public class SolverClient implements IMIPSolver{
 
 	protected static IMIPSolver getSolverForProps(TypedProperties props) {
 		if (props.getBoolean("SOLVE_LOCAL", false)) {
-			log.info("Using local solver");
+			logger.info("Using local solver");
 			return getLocalSolver(props.getString("solver", props.getString("solver",DEFAULT_SOLVER)));
 		} else {
 			String host = props.getString("server", "econcs.eecs.harvard.edu");
 			int port = props.getInt("port", 2000);
-			log.info("Using remote solver: " + host + ":" + port);
+			logger.info("Using remote solver: " + host + ":" + port);
 			return getRemoteSolver(host, port);
 		}
 	}
@@ -174,18 +168,25 @@ public class SolverClient implements IMIPSolver{
 	 * Get a local solver
 	 */
 	protected static IMIPSolver getLocalSolver(String className) {
-		Class cl = null;
+		Class cl;
 		try {
 			cl = Class.forName(className);
 		} catch (ClassNotFoundException e) {
 			throw new MIPException("Could not create local MIPSolver");
+		} catch (NoClassDefFoundError e) {
+			if (e.getMessage().contains("ilog/")) {
+				logger.error("No default solver specified, and attempt to use default solver (CPLEX) failed:\n" +
+						"\tThe cplex.jar file was not found. Continuing with LP Solve, which is condiderably less performant.\n" +
+						"\tIf you want to use CPLEX, make sure you include cplex.jar as a dependency.");
+				return getLocalSolver("edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver");
+			} else {
+				throw e;
+			}
 		}
 		IMIPSolver s;
 		try {
 			s = (IMIPSolver)cl.newInstance();
-		} catch (InstantiationException e1) {
-			throw new MIPException("Could not create local CPlexMIPSolver");
-		} catch (IllegalAccessException e1) {
+		} catch (InstantiationException | IllegalAccessException e1) {
 			throw new MIPException("Could not create local CPlexMIPSolver");
 		}
 		return s;
@@ -230,7 +231,7 @@ public class SolverClient implements IMIPSolver{
 				oos = new ObjectOutputStream(baos);
 				oos.writeObject(mip);
 				time = System.currentTimeMillis() - time;
-				log.trace("Serialized MIP in " + time + " millis.");
+				logger.trace("Serialized MIP in " + time + " millis.");
 			} catch (IOException e) {
 				throw new MIPException("Serialization error", e);
 			}
@@ -238,29 +239,27 @@ public class SolverClient implements IMIPSolver{
 			long time = System.currentTimeMillis();
 			ret = solve(baos.toByteArray());
 			time = System.currentTimeMillis() - time;
-			if (log.isDebugEnabled())
-				log.debug(ret.toString());
-			log.trace("Remote server solved MIP in " + time + " millis.");
+			logger.debug(ret.toString());
+			logger.trace("Remote server solved MIP in " + time + " millis.");
 			
 			return ret;
 		}
 		
 		protected static ISolverServer getServer(String host, int port) {
-			if(log.isInfoEnabled()) {
-				log.info("Contacting Server for remote solver: " + host + ":" + port);
-			}
+			logger.info("Contacting Server for remote solver: " + host + ":" + port);
+
 			//Throwable t = new Throwable();
 			//t.printStackTrace();
 			try {
 				return (ISolverServer)Naming.lookup("//"+host+":"+port+"/"+ISolverServer.NAME);
 			} catch (MalformedURLException e) {
-				log.error("bad URL", e);
+				logger.error("bad URL", e);
 				throw new MIPException("Could not contact server" + e.getMessage());
 			} catch (RemoteException e) {
-				log.error("Can't contact server", e);
+				logger.error("Can't contact server", e);
 				throw new MIPException("Could not contact server: " + e.getMessage());
 			} catch (NotBoundException e) {
-				log.error("Can't contact server", e);
+				logger.error("Can't contact server", e);
 				throw new MIPException("Could not contact server" + e.getMessage());
 			}
 		}

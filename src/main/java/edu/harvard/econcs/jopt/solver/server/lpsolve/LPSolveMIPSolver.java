@@ -30,12 +30,14 @@
  */
 package edu.harvard.econcs.jopt.solver.server.lpsolve;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import edu.harvard.econcs.jopt.solver.mip.*;
+import edu.harvard.econcs.util.NativeUtils;
 import lpsolve.LpSolve;
 import lpsolve.LpSolveException;
 import edu.harvard.econcs.jopt.solver.IMIP;
@@ -44,37 +46,67 @@ import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
-import edu.harvard.econcs.jopt.solver.mip.CompareType;
-import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.MIPResult;
-import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
-import edu.harvard.econcs.jopt.solver.mip.VarType;
-import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A Class for solving MIPs based on the LPSolve solver.
- * 
+ *
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.10 $ on $Date: 2013/12/04 02:18:20 $
  * @since Jan 4, 2005
  **/
 public class LPSolveMIPSolver implements IMIPSolver {
 
-    // private static Log log = new Log(LPSolveMIPSolver.class);
-    // private static final String fileName = "mipInstance";
+    private static final Logger logger = LogManager.getLogger(LPSolveMIPSolver.class);
+
+    private boolean isCapped = false;
+
+    static {
+        try {
+            System.loadLibrary("lpsolve55j");
+        } catch (UnsatisfiedLinkError e) {
+            logger.info("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
+            try {
+                initLocalLpSolve();
+                LpSolve.lpSolveVersion(); // A check if all links are in place
+                logger.info("Succeeded!");
+            } catch (Exception ex) {
+                logger.error("Failed.");
+                logger.error("---------------------------------------------------\n" +
+                        "Error encountered while trying to solve MIP with LPSolve:\n" +
+                        "The native libraries were not found in the java library path," +
+                        "and providing them via the tempDir failed as well.\n" +
+                        "If you're sure you want to use LPSolve, follow these instructions to get it running:\n" +
+                        "\t1.\tDownload the lp_solve_5.5.2.0_dev_* package that fits your platform from\n" +
+                        "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/\n" +
+                        "\t2.\tDownload the java interface for LPSolve from\n" +
+                        "\t\t\thttps://sourceforge.net/projects/lpsolve/files/lpsolve/5.5.2.0/lp_solve_5.5.2.0_java.zip/download\n" +
+                        "\t3.\tExtract both packages and place the dev-package (from 1.) anywhere where the\n" +
+                        "\t\t\tPATH (-> Windows) or LD_LIBRARY_PATH (-> Unix) environment variable is pointing at\n" +
+                        "\t\t\t(or make it point there).\n" +
+                        "\t4.\tPlace the corresponding interface file (ending in j, e.g. 64_lpsolve55j.dll for Windows)\n" +
+                        "\t\t\tfrom the /lib directory of the java interface (from 2.) into the same directory as the other package.\n" +
+                        "\t5.\tRestart your IDE to freshly load the environment variables.\n" +
+                        "---------------------------------------------------");
+                throw e;
+            }
+        }
+    }
+
     private static final long TIME_LIMIT = 60000;
+
+    /**
+     * LPSolve starts to behave inconsistently if any number is higher than 9000000.
+     */
+    private static final int LPSOLVE_MAX_VALUE = 9000000;
 
     private static boolean debug = false;
 
-    {
-        // Load the necessary System libraries:
-        // java.library.path must point to lib directory...
-        System.loadLibrary("lpsolve55");
-        System.loadLibrary("lpsolve55j");
-    }
-
     public IMIPResult solve(IMIP mip) throws MIPException {
+        isCapped = false;
         try {
             Map<String, LinearTerm> objTerms = getObjTerms(mip);
             List<Variable> activeVars = getActiveVars(mip);
@@ -116,7 +148,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
             for (int i = 0; i < activeVars.size(); i++) {
                 Variable v = activeVars.get(i);
                 LinearTerm t = objTerms.get(v.getName());
-                obj[i + 1] = t == null ? 0 : t.getCoefficient();
+                obj[i + 1] = valueAfterCapping(t);
                 solver.setColName(i + 1, v.getName());
             }
             solver.setObjFn(obj);
@@ -129,42 +161,60 @@ public class LPSolveMIPSolver implements IMIPSolver {
                     solver.setBinary(i + 1, true);
                 }
                 if (t == VarType.DOUBLE) {
-                    solver.setBounds(i + 1, v.getLowerBound(), v.getUpperBound());
+                    solver.setBounds(i + 1, boundAfterCapping(v, true), boundAfterCapping(v, false));
                 }
                 if (t == VarType.INT) {
-                    solver.setBounds(i + 1, v.getLowerBound(), v.getUpperBound());
+                    solver.setBounds(i + 1, boundAfterCapping(v, true), boundAfterCapping(v, false));
                     solver.setInt(i + 1, true);
                 }
             }
 
             // add constraints
             List<Constraint> constraints = mip.getConstraints();
-            for (int i = 0; i < constraints.size(); i++) {
-                Constraint c = constraints.get(i);
+            for (Constraint c : constraints) {
                 List<LinearTerm> terms = getTerms(mip, activeVars, c);
                 double[] row = new double[activeVars.size() + 1];
-                for (int j = 0; j < activeVars.size(); j++) {
-                    LinearTerm t = terms.get(j);
-                    row[j + 1] = t == null ? 0 : t.getCoefficient();
+                for (int i = 0; i < activeVars.size(); i++) {
+                    LinearTerm t = terms.get(i);
+                    row[i + 1] = valueAfterCapping(t);
                 }
                 solver.addConstraint(row, getType(c.getType()), c.getConstant());
                 // solver.setRowName(i+1, c.toString());
             }
             solver.setAddRowmode(false);
 
-            if (!debug) {
+            if (!mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) && !logger.isDebugEnabled()) {
+                // Disable output
                 solver.setVerbose(0);
             }
 
             // solver.setDebug(debug);
 
+            if (isCapped) {
+                logger.warn("Warning: Some values have been capped to +/- " + LPSOLVE_MAX_VALUE + " because " +
+                        "LPSolve can't handle numbers that are higher.");
+            }
+
             // solve the problem
+            logger.info("Starting to solve mip.");
+            long startTime = System.currentTimeMillis();
             int result = solver.solve();
-            if (result != LpSolve.OPTIMAL) {
+            if (result == LpSolve.SUBOPTIMAL) {
+                if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
+                    logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions, " +
+                            "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
+                } else {
+                    throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
+                            "Due to user preferences, an exception is thrown. To accept suboptimal solutions after a timeout,\n" +
+                            "set SolveParam.ACCEPT_SUBOPTIMAL to true.");
+                }
+            } else if (result != LpSolve.OPTIMAL) {
                 String problem = solver.getStatustext(result);
                 solver.deleteLp();
                 throw new MIPInfeasibleException(problem);
             }
+
+            logger.info("Solve time: " + (System.currentTimeMillis() - startTime ) + " ms");
 
             if (debug) {
                 // write out the formulation:
@@ -173,18 +223,18 @@ public class LPSolveMIPSolver implements IMIPSolver {
             }
 
             // Fill the results:
-            Map<String, Double> values = new HashMap<String, Double>();
+            Map<String, Double> values = new HashMap<>();
             double[] vars = solver.getPtrVariables();
             for (int i = 0; i < activeVars.size(); i++) {
                 Variable v = activeVars.get(i);
-                values.put(v.getName(), new Double(vars[i]));
+                values.put(v.getName(), vars[i]);
             }
             Map<Constraint, Double> duals = null;
             if (mip.getBooleanSolveParam(SolveParam.CALC_DUALS, false)) {
-                duals = new HashMap<Constraint, Double>();
+                duals = new HashMap<>();
                 double[] dualVars = solver.getPtrDualSolution();
                 for (int i = 0; i < constraints.size(); i++) {
-                    duals.put(mip.getConstraints().get(i), new Double(dualVars[i + 1]));
+                    duals.put(mip.getConstraints().get(i), dualVars[i + 1]);
                 }
             }
 
@@ -192,10 +242,10 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
             // print solution
             if (debug) {
-                System.out.println("Value of objective function: " + solver.getObjective());
+                logger.info("Value of objective function: " + solver.getObjective());
                 double[] var = solver.getPtrVariables();
                 for (int i = 0; i < var.length; i++) {
-                    System.out.println("Value of var[" + i + "] = " + var[i]);
+                    logger.info("Value of var[" + i + "] = " + var[i]);
                 }
             }
 
@@ -208,10 +258,37 @@ public class LPSolveMIPSolver implements IMIPSolver {
         }
     }
 
+    private double boundAfterCapping(Variable v, boolean isLowerBound) {
+        double bound = isLowerBound ? v.getLowerBound() : v.getUpperBound();
+        if (Math.abs(bound) > LPSOLVE_MAX_VALUE) {
+            isCapped = true;
+            bound = isLowerBound ? -LPSOLVE_MAX_VALUE : LPSOLVE_MAX_VALUE;
+            if (v.getLowerBound() > v.getUpperBound()) {
+                throw new MIPException("LPSolve can't handle numbers higher than " + LPSOLVE_MAX_VALUE + ". " +
+                        "After capping the " + (isLowerBound ? "lower" : "upper") + " bound of variable " + v.getName()
+                        + " the lower bound was " + "higher than the upper bound, which makes the MIP not solvable.");
+            }
+        }
+        return bound;
+    }
+
+    private double valueAfterCapping(LinearTerm t) {
+        if (t == null) {
+            return 0;
+        } else if (t.getCoefficient() > LPSOLVE_MAX_VALUE) {
+            isCapped = true;
+            return LPSOLVE_MAX_VALUE;
+        } else if (t.getCoefficient() < -LPSOLVE_MAX_VALUE) {
+            isCapped = true;
+            return -LPSOLVE_MAX_VALUE;
+        } else {
+            return t.getCoefficient();
+        }
+    }
+
     private List<Variable> getActiveVars(IMIP mip) {
-        List<Variable> ret = new ArrayList<Variable>(mip.getNumVars());
-        for (Iterator<?> iter = mip.getVars().values().iterator(); iter.hasNext();) {
-            Variable v = (Variable) iter.next();
+        List<Variable> ret = new ArrayList<>(mip.getNumVars());
+        for (Variable v : mip.getVars().values()) {
             if (!v.ignore()) {
                 ret.add(v);
             }
@@ -223,7 +300,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
         if (!mip.getQuadraticObjectiveTerms().isEmpty()) {
             throw new MIPException("MIP has quadratic terms, not supported by LPSolve");
         }
-        Map<String, LinearTerm> ret = new HashMap<String, LinearTerm>();
+        Map<String, LinearTerm> ret = new HashMap<>();
         for (LinearTerm t : mip.getLinearObjectiveTerms()) {
             Variable v = mip.getVar(t.getVarName());
             if (!v.ignore()) {
@@ -233,15 +310,20 @@ public class LPSolveMIPSolver implements IMIPSolver {
         return ret;
     }
 
-
     private List<LinearTerm> getTerms(IMIP mip, List<Variable> activeVars, Constraint c) {
         if (!c.getQuadraticTerms().isEmpty()) {
             throw new MIPException("Constraint has quadratic terms, not supported by LPSolve. " + c);
         }
-        List<LinearTerm> ret = new ArrayList<LinearTerm>();
-        Map<Variable, LinearTerm> varToTerm = new HashMap<Variable, LinearTerm>();
+        List<LinearTerm> ret = new ArrayList<>();
+        Map<Variable, LinearTerm> varToTerm = new HashMap<>();
         for (LinearTerm t : c.getLinearTerms()) {
-            varToTerm.put(mip.getVar(t.getVarName()), t);
+            if (varToTerm.containsKey(mip.getVar(t.getVarName()))) {
+                varToTerm.put(mip.getVar(t.getVarName()),
+                        new LinearTerm(varToTerm.get(mip.getVar(t.getVarName())).getCoefficient()
+                                + t.getCoefficient(), mip.getVar(t.getVarName())));
+            } else {
+                varToTerm.put(mip.getVar(t.getVarName()), t);
+            }
         }
         for (int i = 0; i < activeVars.size(); i++) {
             ret.add(varToTerm.get(activeVars.get(i)));
@@ -264,10 +346,38 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
     public static void main(String argv[]) {
         if (argv.length != 1) {
-            System.err.println("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
+            logger.error("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
             System.exit(1);
         }
         int port = Integer.parseInt(argv[0]);
         SolverServer.createServer(port, LPSolveMIPSolver.class);
+    }
+
+    private static void initLocalLpSolve() throws Exception {
+        // Find or create the jopt-lib-lpsolve directory in temp
+        File lpSolveTempDir = NativeUtils.createTempDir("jopt-lib-lpsolve");
+        lpSolveTempDir.deleteOnExit();
+
+        // Add this directory to the java library path
+        NativeUtils.addLibraryPath(lpSolveTempDir.getAbsolutePath());
+
+        // Add the right files to this directory
+        if (SystemUtils.IS_OS_WINDOWS) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_lpsolve55j.dll", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55.dll", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_lpsolve55j.dll", lpSolveTempDir);
+            }
+        } else if (SystemUtils.IS_OS_UNIX) {
+            if (SystemUtils.OS_ARCH.contains("64")) {
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/64_liblpsolve55j.so", lpSolveTempDir);
+            } else {
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55.so", lpSolveTempDir);
+                NativeUtils.loadLibraryFromJar("/lib/32_liblpsolve55j.so", lpSolveTempDir);
+            }
+        }
     }
 }

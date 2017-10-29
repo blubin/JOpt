@@ -45,7 +45,6 @@ import java.util.*;
  * @since April 12, 2004
  **/
 public class MIP implements IMIP, Serializable, Cloneable {
-    // private static final Log log = new Log(MIP.class);
 
     private static final long serialVersionUID = 1152496442L;
 
@@ -492,7 +491,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
         setSolveParam(SolveParam.ZERO_MISSING_PROPOSED, true);
         setSolveParam(SolveParam.PROBLEM_FILE, "");
         setSolveParam(SolveParam.CONSTRAINT_BACKOFF_LIMIT, .1d);
-        setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+        setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
         setSolveParam(SolveParam.CALCULATE_CONFLICT_SET, true);
         setSolveParam(SolveParam.MAX_OBJ_THRESHOLD, 1e75);
         setSolveParam(SolveParam.MIN_OBJ_VALUE, -1e75);
@@ -512,7 +511,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     // ///////////////////
 
     /**
-     * Throws exeption if n is greater than MIP.MAX_VALUE
+     * Throws exception if n is greater than MIP.MAX_VALUE
      *
      * @param n
      */
