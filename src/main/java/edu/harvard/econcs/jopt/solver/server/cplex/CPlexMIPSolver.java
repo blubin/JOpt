@@ -44,6 +44,7 @@ import ilog.concert.IloQuadNumExpr;
 import ilog.concert.IloRange;
 import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.BooleanParam;
+import ilog.cplex.IloCplex.IntParam;
 import ilog.cplex.IloCplex.ConflictStatus;
 import ilog.cplex.IloCplex.DoubleParam;
 import ilog.cplex.IloCplex.StringParam;
@@ -78,7 +79,7 @@ import org.apache.logging.log4j.Logger;
  **/
 public class CPlexMIPSolver implements IMIPSolver {
 
-    private static final Logger logger = LogManager.getLogger(CPlexMIPSolver.class.getSimpleName());
+    private static final Logger logger = LogManager.getLogger(CPlexMIPSolver.class);
 
     // private static final boolean debug = true;
     // private static final String fileName = "mipInstance";
@@ -95,7 +96,12 @@ public class CPlexMIPSolver implements IMIPSolver {
 
             logger.debug("About to set parameters... ");
 
-            setControlParams(cplex, mip.getSpecifiedSolveParams() ,mip::getSolveParam);
+            setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
+
+            // Log only on info logging level
+            if (!mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) && !logger.isDebugEnabled()) {
+                cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 0);
+            }
 
             // cplex.setParam(IloCplex.DoubleParam.EpInt,
             // 1.0/(MIP.MAX_VALUE*1.0-1));

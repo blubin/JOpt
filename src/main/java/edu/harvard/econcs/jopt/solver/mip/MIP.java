@@ -491,7 +491,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
         setSolveParam(SolveParam.ZERO_MISSING_PROPOSED, true);
         setSolveParam(SolveParam.PROBLEM_FILE, "");
         setSolveParam(SolveParam.CONSTRAINT_BACKOFF_LIMIT, .1d);
-        setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+        setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
         setSolveParam(SolveParam.CALCULATE_CONFLICT_SET, true);
         setSolveParam(SolveParam.MAX_OBJ_THRESHOLD, 1e75);
         setSolveParam(SolveParam.MIN_OBJ_VALUE, -1e75);

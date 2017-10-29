@@ -183,7 +183,8 @@ public class LPSolveMIPSolver implements IMIPSolver {
             }
             solver.setAddRowmode(false);
 
-            if (!debug) {
+            if (!mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) && !logger.isDebugEnabled()) {
+                // Disable output
                 solver.setVerbose(0);
             }
 
@@ -195,6 +196,8 @@ public class LPSolveMIPSolver implements IMIPSolver {
             }
 
             // solve the problem
+            logger.info("Starting to solve mip.");
+            long startTime = System.currentTimeMillis();
             int result = solver.solve();
             if (result == LpSolve.SUBOPTIMAL) {
                 if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
@@ -210,6 +213,8 @@ public class LPSolveMIPSolver implements IMIPSolver {
                 solver.deleteLp();
                 throw new MIPInfeasibleException(problem);
             }
+
+            logger.info("Solve time: " + (System.currentTimeMillis() - startTime ) + " ms");
 
             if (debug) {
                 // write out the formulation:
