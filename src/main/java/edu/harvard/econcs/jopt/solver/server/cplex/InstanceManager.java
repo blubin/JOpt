@@ -38,7 +38,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 import edu.harvard.econcs.jopt.solver.MIPException;
-import edu.harvard.econcs.util.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
@@ -46,7 +47,7 @@ import edu.harvard.econcs.util.Log;
  * @since Apr 12, 2004
  **/
 public class InstanceManager {
-    private static Log log = new Log(InstanceManager.class);
+    private static final Logger logger = LogManager.getLogger(InstanceManager.class);
 
     private static int numSimultaneous = 25;
     private static InstanceManager instance = new InstanceManager();
@@ -69,13 +70,13 @@ public class InstanceManager {
             try {
                 this.wait();
             } catch (InterruptedException e) {
-                log.error("Interrupted while trying to get IloCPlex, resetting", e);
+                logger.error("Interrupted while trying to get IloCPlex, resetting", e);
                 for (Iterator iter = inUse.iterator(); iter.hasNext();) {
                     IloCplex c = (IloCplex) iter.next();
                     try {
                         c.end();
                     } catch (RuntimeException ex) {
-                        log.error("Exception trying to close CPLEX", ex);
+                        logger.error("Exception trying to close CPLEX", ex);
                     }
                 }
                 inUse.clear();
@@ -116,14 +117,14 @@ public class InstanceManager {
                 return cplex;
             } catch (IloException ex) {
                 if (i < 9) {
-                    log.warn("Could not get CPLEX instance, retrying", ex);
+                    logger.warn("Could not get CPLEX instance, retrying", ex);
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    log.warn("Could not get CPLEX instance, giving up", ex);
+                    logger.warn("Could not get CPLEX instance, giving up", ex);
                     return null;
                 }
             }
@@ -141,7 +142,7 @@ public class InstanceManager {
             cplex.clearCallbacks();
             cplex.clearModel();
         } catch (IloException e) {
-            log.error("Exception clearing model: " + e.getMessage(), e);
+            logger.error("Exception clearing model: " + e.getMessage(), e);
             
             cplex.end();
             inUse.remove(cplex);

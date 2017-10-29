@@ -45,7 +45,6 @@ import java.util.*;
  * @since April 12, 2004
  **/
 public class MIP implements IMIP, Serializable, Cloneable {
-    // private static final Log log = new Log(MIP.class);
 
     private static final long serialVersionUID = 1152496442L;
 

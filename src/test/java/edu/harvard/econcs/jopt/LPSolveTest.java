@@ -7,6 +7,8 @@ import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import edu.harvard.econcs.jopt.solver.server.lpsolve.LPSolveMIPSolver;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -16,9 +18,11 @@ import static org.junit.Assert.fail;
  */
 public class LPSolveTest {
 
+    private static final Logger logger = LogManager.getLogger(LPSolveTest.class);
+
     @Test
     public void compareResultsToCplex() {
-        IMIP mip = TestSuite.provideBanalExample();
+        IMIP mip = TestSuite.provideTrivialExample();
 
         SolverClient lpSolveSolverClient = new SolverClient(new LPSolveMIPSolver());
         IMIPResult lpSolveResult = lpSolveSolverClient.solve(mip);
@@ -52,7 +56,7 @@ public class LPSolveTest {
             fail("Should have failed. Was it too fast?");
         } catch (MIPException e) {
             // Success - should throw this error
-            System.out.println("Successfully caught exception for the timeout.");
+            logger.info("Successfully caught exception for the timeout.");
         }
     }
 }

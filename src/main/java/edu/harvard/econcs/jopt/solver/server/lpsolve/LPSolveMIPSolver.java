@@ -48,6 +48,8 @@ import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A Class for solving MIPs based on the LPSolve solver.
@@ -58,18 +60,22 @@ import org.apache.commons.lang3.SystemUtils;
  **/
 public class LPSolveMIPSolver implements IMIPSolver {
 
+    private static final Logger logger = LogManager.getLogger(LPSolveMIPSolver.class);
+
     private boolean isCapped = false;
 
     static {
         try {
             System.loadLibrary("lpsolve55j");
         } catch (UnsatisfiedLinkError e) {
-            System.out.println("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
+            logger.info("No linked binary files of LPSolve found. Trying to provide them via tempDir...");
             try {
                 initLocalLpSolve();
                 LpSolve.lpSolveVersion(); // A check if all links are in place
+                logger.info("Succeeded!");
             } catch (Exception ex) {
-                System.err.println("---------------------------------------------------\n" +
+                logger.error("Failed.");
+                logger.error("---------------------------------------------------\n" +
                         "Error encountered while trying to solve MIP with LPSolve:\n" +
                         "The native libraries were not found in the java library path," +
                         "and providing them via the tempDir failed as well.\n" +
@@ -90,8 +96,6 @@ public class LPSolveMIPSolver implements IMIPSolver {
         }
     }
 
-    // private static Log log = new Log(LPSolveMIPSolver.class);
-    // private static final String fileName = "mipInstance";
     private static final long TIME_LIMIT = 60000;
 
     /**
@@ -186,7 +190,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
             // solver.setDebug(debug);
 
             if (isCapped) {
-                System.out.println("Warning: Some values have been capped to +/- " + LPSOLVE_MAX_VALUE + " because " +
+                logger.warn("Warning: Some values have been capped to +/- " + LPSOLVE_MAX_VALUE + " because " +
                         "LPSolve can't handle numbers that are higher.");
             }
 
@@ -194,7 +198,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
             int result = solver.solve();
             if (result == LpSolve.SUBOPTIMAL) {
                 if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
-                    System.out.println("Suboptimal solution! Continuing... To reject suboptimal solutions," +
+                    logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions," +
                             "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
                 } else {
                     throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
@@ -233,10 +237,10 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
             // print solution
             if (debug) {
-                System.out.println("Value of objective function: " + solver.getObjective());
+                logger.info("Value of objective function: " + solver.getObjective());
                 double[] var = solver.getPtrVariables();
                 for (int i = 0; i < var.length; i++) {
-                    System.out.println("Value of var[" + i + "] = " + var[i]);
+                    logger.info("Value of var[" + i + "] = " + var[i]);
                 }
             }
 
@@ -337,7 +341,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
 
     public static void main(String argv[]) {
         if (argv.length != 1) {
-            System.err.println("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
+            logger.error("Usage: edu.harvard.econcs.jopt.solver.server.cplex.LPSolveMIPSolver <port>");
             System.exit(1);
         }
         int port = Integer.parseInt(argv[0]);

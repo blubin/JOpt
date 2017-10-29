@@ -31,7 +31,6 @@
 package edu.harvard.econcs.jopt.solver.server;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.rmi.AccessException;
 import java.rmi.AlreadyBoundException;
@@ -48,7 +47,8 @@ import java.util.Properties;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
-import edu.harvard.econcs.util.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A special kind of SolverServer that knows about a bunch of
@@ -66,7 +66,7 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 	 */
 	private static final long serialVersionUID = 3545516201121167412L;
 
-	protected static Log log = new Log(SolverLoadBalancer.class);
+	private static final Logger logger = LogManager.getLogger(SolverLoadBalancer.class);
 	
 	private Properties props;
 	
@@ -75,12 +75,10 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 	
 	/**
 	 * Create a new Server
-	 * @param port
-	 * @param solverClass
 	 */
 	public static void createServer(int port, Properties props) throws MIPException {
 		try {
-			log.main("Binding load balancer to port: " + port);
+			logger.info("Binding load balancer to port: " + port);
 			Registry localreg = LocateRegistry.createRegistry(port);
 			SolverLoadBalancer server = new SolverLoadBalancer(port, props);
 			localreg.bind(NAME, server);
@@ -92,12 +90,7 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 			throw new MIPException("RemoteException",e);
 		}
 	}
-	
-	/**
-	 * @param solverClass -- what class to use to create new instances 
-	 * of the solver.
-	 * @throws RemoteException
-	 */
+
 	protected SolverLoadBalancer(int port, Properties props) throws RemoteException {
 		super(port);
 		this.props = props;
@@ -118,7 +111,7 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 			try {
 				cl = createSolverClient(host, p);
 			} catch (MIPException e) {
-				log.warn("Could not connect to: " + host + ":" + p + " Error: " + e.getMessage());
+				logger.warn("Could not connect to: " + host + ":" + p + " Error: " + e.getMessage());
 				tryLater.add(new ServerLoc(host, p));
 			}
 			if (cl != null) {
@@ -152,12 +145,12 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 		boolean ret = false;
 		for (Iterator iter = tryLater.iterator(); iter.hasNext(); ) {
 			ServerLoc loc = (ServerLoc)iter.next();
-			log.info("Trying to reconnect to: " + loc);
+			logger.info("Trying to reconnect to: " + loc);
 			SolverClient cl = null;
 			try {
 				cl = createSolverClient(loc.host, loc.port);
 			} catch (MIPException e) {
-				log.warn("Could not connect to: " + loc + " Error: " + e.getMessage());
+				logger.warn("Could not connect to: " + loc + " Error: " + e.getMessage());
 			}
 			if (cl != null) {
 				clients.add(cl);
@@ -176,9 +169,9 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 		try {
 			client = getClientHost();
 		} catch (ServerNotActiveException e) {
-			log.warn("Could not get client host: " + e.getMessage());
+			logger.warn("Could not get client host: " + e.getMessage());
 		}
-		log.main("Creating Load Balancing Remote Solver for: " + client);
+		logger.info("Creating Load Balancing Remote Solver for: " + client);
 		return new BalancingRemoteMIPSolver();
 	}
 	
@@ -197,20 +190,20 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 				if (cl == null) {
 					throw new MIPException("Could not find a solver to solve problem: all servers down");
 				}
-				log.info("Attempting to solve using: " + cl.getHost() + ":" + cl.getPort());
+				logger.info("Attempting to solve using: " + cl.getHost() + ":" + cl.getPort());
 				try {
 					long time = System.currentTimeMillis();
 					IMIPResult ret = cl.solve(serializedMip);
 					time = System.currentTimeMillis() - time;
-					log.info("MIP solved in " + time + " by " + cl.getHost() + ":" + cl.getPort());
+					logger.info("MIP solved in " + time + " by " + cl.getHost() + ":" + cl.getPort());
 					return ret;
 				} catch (MIPException e) {
 					Throwable t = e.getCause();
 					if (t instanceof RemoteException) {
-						log.error("Remote Exception", t);
+						logger.error("Remote Exception", t);
 						clientDead(cl);
 					} else {
-						log.error("Exception from solver", e);
+						logger.error("Exception from solver", e);
 						throw e;
 					}
 				}
@@ -253,7 +246,7 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 		}
 		
 		private void clientDead(SolverClient cl) {
-			log.warn("Client died: " + cl.getHost() + ":" + cl.getPort());
+			logger.warn("Client died: " + cl.getHost() + ":" + cl.getPort());
 			removeClient(cl);
 			curSpot--;
 		}
@@ -286,7 +279,7 @@ public class SolverLoadBalancer extends UnicastRemoteObject
 	
 	public static void main(String argv[]) throws IOException {
 		if (argv.length != 2) {
-			System.err.println("Usage: <port> <config file>");
+			logger.error("Usage: <port> <config file>");
 			System.exit(1);
 		}
 		int port = Integer.parseInt(argv[0]);

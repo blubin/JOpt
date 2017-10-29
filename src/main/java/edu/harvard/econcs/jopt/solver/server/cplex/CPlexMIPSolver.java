@@ -58,9 +58,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.IMIPSolver;
@@ -69,6 +66,8 @@ import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
 import edu.harvard.econcs.jopt.solver.MIPInfeasibleException.Cause;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.server.SolverServer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Solves a MIP structure. Should be the only class using CPlex code directly.
@@ -79,7 +78,7 @@ import edu.harvard.econcs.jopt.solver.server.SolverServer;
  **/
 public class CPlexMIPSolver implements IMIPSolver {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(CPlexMIPSolver.class);
+    private static final Logger logger = LogManager.getLogger(CPlexMIPSolver.class.getSimpleName());
 
     // private static final boolean debug = true;
     // private static final String fileName = "mipInstance";
@@ -90,11 +89,11 @@ public class CPlexMIPSolver implements IMIPSolver {
             // This blocks until one can be obtained:
             while (cplex.getObjective() != null) {
                 CPLEXInstanceManager.INSTANCE.checkInCplex(cplex);
-                LOGGER.warn("Model not cleared");
+                logger.warn("Model not cleared");
                 cplex = CPLEXInstanceManager.INSTANCE.checkOutCplex();
             }
 
-            LOGGER.info("About to set parameters... ");
+            logger.debug("About to set parameters... ");
 
             setControlParams(cplex, mip.getSpecifiedSolveParams() ,mip::getSolveParam);
 
@@ -104,19 +103,14 @@ public class CPlexMIPSolver implements IMIPSolver {
             // 1.0/(MIP.MAX_VALUE*1.0-1));
 
             long convertStartTime = System.currentTimeMillis();
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Starting to convert mip to Cplex object.");
-            }
+            logger.debug("Starting to convert mip to Cplex object.");
 
             Map<String, IloNumVar> vars = setupVariables(mip, cplex);
             Map<Constraint, IloRange> constraintsToIloConstraints = setupConstraints(mip, cplex, vars);
 
             setUpObjective(mip, cplex, vars);
 
-            if (LOGGER.isDebugEnabled()) {
-                long convertEndTime = System.currentTimeMillis();
-                LOGGER.debug("Converting mip done. Took: " + (convertEndTime - convertStartTime) + " ms");
-            }
+            logger.debug("Converting mip done. Took: " + (System.currentTimeMillis() - convertStartTime) + " ms");
 
             // write model to file for debugging:
             // ///////////////////////////////////
@@ -148,7 +142,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         // ///////////////////////////////
         Map<Constraint, Double> constraintidsToDuals = null;
 
-        LOGGER.info("Starting to solve mip.");
+        logger.info("Starting to solve mip.");
         long startTime = System.currentTimeMillis();
         long solveTime = 0;
         double objValue = 0;
@@ -179,17 +173,15 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                 long endTime = System.currentTimeMillis();
                 solveTime = endTime - startTime;
-                LOGGER.info("Solve time: " + solveTime + " ms");
+                logger.info("Solve time: " + solveTime + " ms");
                 for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext();) {
                     String varName = (String) iter.next();
                     if (mip.getVar(varName).ignore()) {
-                        if (LOGGER.isDebugEnabled())
-                            LOGGER.debug("Skipping Variable " + varName);
+                        logger.debug("Skipping Variable " + varName);
                         continue;
                     }
                     IloNumVar numVar = vars.get(varName);
-                    if (LOGGER.isDebugEnabled())
-                        LOGGER.debug(numVar + " : " + varName);
+                    logger.debug(numVar + " : " + varName);
                     try {
                         if (numVar.getType().equals(IloNumVarType.Float)) {
                             values.put(varName, new Double(cplex.getValue(numVar)));
@@ -210,8 +202,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                 + "\nthat aren't bounded, you at least need to explicitly throw in a constraint bounding the"
                                 + "\nvariable by -infinity and infinity -- but this is more likely a bug in your user code.");
                     }
-                    if (LOGGER.isDebugEnabled())
-                        LOGGER.debug("var " + varName + ": " + values.get(varName));
+                    logger.debug("var " + varName + ": " + values.get(varName));
                 }
                 if (!cplex.isMIP() && mip.getBooleanSolveParam(SolveParam.CALC_DUALS, false)) {
                     constraintidsToDuals = new HashMap<>();
@@ -224,15 +215,13 @@ public class CPlexMIPSolver implements IMIPSolver {
                     }
                 }
                 objValue = cplex.getObjValue();
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("obj: " + objValue);
+                logger.debug("obj: " + objValue);
                 IloCplex.Status optStatus = cplex.getStatus();
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("CPlex solution status: " + optStatus);
+                logger.debug("CPlex solution status: " + optStatus);
             } else {
                 // Solve returned an error.
                 IloCplex.Status optStatus = cplex.getStatus();
-                LOGGER.warn("CPlex solve failed status: " + optStatus);
+                logger.warn("CPlex solve failed status: " + optStatus);
                 if (optStatus == IloCplex.Status.Infeasible || optStatus == IloCplex.Status.InfeasibleOrUnbounded) {
                     Object cplexParam = getCplexParam(SolveParam.ABSOLUTE_VAR_BOUND_GAP);
                     double dval = cplex.getParam((IloCplex.DoubleParam) cplexParam) * 10;
@@ -240,7 +229,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         MIPException e = createInfesibilityException(cplex, vars, constraintsToIloConstraints, mip);
                         throw e;
                     } else {
-                        LOGGER.warn("No feasible Solution. Resolving with looser tolerance: " + dval);
+                        logger.warn("No feasible Solution. Resolving with looser tolerance: " + dval);
                         cplex.setParam((IloCplex.DoubleParam) cplexParam, dval);
                         cplexParam = getCplexParam(SolveParam.ABSOLUTE_INT_GAP);
                         cplex.setParam((IloCplex.DoubleParam) cplexParam, dval);
@@ -254,7 +243,7 @@ public class CPlexMIPSolver implements IMIPSolver {
 
         if (cplex.getCplexStatus() == IloCplex.CplexStatus.AbortTimeLim) {
             if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
-                System.out.println("Suboptimal solution! Continuing... To reject suboptimal solutions," +
+                logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions," +
                         "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
             } else {
                 throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
@@ -275,7 +264,7 @@ public class CPlexMIPSolver implements IMIPSolver {
     private Queue<IntermediateSolution> findIntermediateSolutions(IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
 
         Queue<IntermediateSolution> intermediateSolutions = new LinkedList<>();
-        LOGGER.debug("Found {} intermediate solutions", cplex.getSolnPoolNsolns());
+        logger.debug("Found {} intermediate solutions", cplex.getSolnPoolNsolns());
         for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
             Map<String, Double> interMediateValues = new HashMap<String, Double>();
             for (String name : vars.keySet()) {
@@ -306,7 +295,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             setUpObjective(mip, cplex, vars);
             cplex.exportModel(path.toString());
         } catch (Exception ex) {
-            LOGGER.error("Failed to write cplex model to disk", ex);
+            logger.error("Failed to write cplex model to disk", ex);
         }
 
     }
@@ -322,12 +311,10 @@ public class CPlexMIPSolver implements IMIPSolver {
         IloNumVarType varType = IloNumVarType.Float;
         for (Variable var : mip.getVars().values()) {
             if (var.ignore()) {
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("Skipping variable: " + var);
+                logger.debug("Skipping variable: " + var);
                 continue;
             }
-            if (LOGGER.isDebugEnabled())
-                LOGGER.debug("Adding variable: " + var);
+            logger.debug("Adding variable: " + var);
             VarType type = var.getType();
             if (VarType.DOUBLE.equals(type)) {
                 varType = IloNumVarType.Float;
@@ -388,9 +375,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         valArray[i] = mip.getProposedDoubleValue(v);
                     }
 
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("proposing value: " + v.getName() + "\t" + valArray[i]);
-                    }
+                    logger.debug("proposing value: " + v.getName() + "\t" + valArray[i]);
                 } else {
                     if (bZeroMissingVariables == true) {
                         valArray[i] = 0;
@@ -407,9 +392,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                         + "numberOfBooleanAndIntVariables, numberOfProposedBooleanAndIntVariables: " + numberOfBooleanAndIntVariables + ", "
                         + numberOfProposedBooleanAndIntVariables);
                 /*
-                 * log.warn(
+                 * logger.warn(
                  * "Proposing Values: Total and Proposed Boolean and Int Variables not equal: proposition won't be feasible."
-                 * ); log.warn(
+                 * ); logger.warn(
                  * "Proposing Values: numberOfBooleanAndIntVariables, numberOfProposedBooleanAndIntVariables: "
                  * + numberOfBooleanAndIntVariables + ", " +
                  * numberOfProposedBooleanAndIntVariables);
@@ -418,9 +403,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 // http://www.eecs.harvard.edu/~jeffsh/_cplexdoc/javadocman/html/
             }
 
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Using primed start values for solving.");
-            }
+            logger.debug("Using primed start values for solving.");
             if (cplex.isMIP()) {
                 cplex.addMIPStart(varArray, valArray);
             } else {
@@ -441,8 +424,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         int linearObjTermsUsed = 0;
         for (LinearTerm term : mip.getLinearObjectiveTerms()) {
             if (mip.getVar(term.getVarName()).ignore()) {
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("Skipping term: " + term);
+                logger.debug("Skipping term: " + term);
                 continue;
             }
             linearObjTermsUsed++;
@@ -455,8 +437,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         int quadraticObjTermsUsed = 0;
         for (QuadraticTerm term : mip.getQuadraticObjectiveTerms()) {
             if (mip.getVar(term.getVarNameA()).ignore() || mip.getVar(term.getVarNameB()).ignore()) {
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("Skipping term: " + term);
+                logger.debug("Skipping term: " + term);
                 continue;
             }
             quadraticObjTermsUsed++;
@@ -480,8 +461,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             numObjFunc = lqexpr;
         }
 
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("Objective: " + numObjFunc);
+        logger.debug("Objective: " + numObjFunc);
 
         if (mip.isObjectiveMin()) {
             cplex.addMinimize(numObjFunc);
@@ -496,8 +476,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         Map<Constraint, IloRange> constraintidsToConstraints = new HashMap<>();
         for (Constraint constraint : mip.getConstraints()) {
 
-            if (LOGGER.isDebugEnabled())
-                LOGGER.debug("Adding constraint: " + constraint);
+            logger.debug("Adding constraint: " + constraint);
 
             // Add Linear Terms:
             int linearTermsUsed = 0;
@@ -508,8 +487,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                     throw new MIPException("Invalid variable name in term: " + term);
                 }
                 if (var.ignore()) {
-                    if (LOGGER.isDebugEnabled())
-                        LOGGER.debug("Skipping term: " + term);
+                    logger.debug("Skipping term: " + term);
                     continue;
                 }
                 linearTermsUsed++;
@@ -529,8 +507,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                     throw new MIPException("Invalid variable name in term: " + term);
                 }
                 if (varA.ignore() || varB.ignore()) {
-                    if (LOGGER.isDebugEnabled())
-                        LOGGER.debug("Skipping term: " + term);
+                    logger.debug("Skipping term: " + term);
                     continue;
                 }
                 quadraticTermsUsed++;
@@ -540,8 +517,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             // Now make a single constraint from the above two if needed:
             IloNumExpr numExpr = null;
             if (linearTermsUsed == 0 && quadraticTermsUsed == 0) {
-                if (LOGGER.isDebugEnabled())
-                    LOGGER.debug("Skipping constraint" + constraint);
+                logger.debug("Skipping constraint" + constraint);
                 continue;
             } else if (quadraticTermsUsed == 0) {
                 numExpr = linearExpr;
@@ -645,9 +621,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             Object value = getValue.apply(solveParam);
             if (!solveParam.isInternal()) {
                 Object cplexParam = getCplexParam(solveParam);
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("Setting " + solveParam.toString() + " to: " + value.toString());
-                }
+                logger.debug("Setting " + solveParam.toString() + " to: " + value.toString());
                 try {
                     if (solveParam.isBoolean()) {
                         cplex.setParam((BooleanParam) cplexParam, ((Boolean) value).booleanValue());
@@ -787,7 +761,7 @@ public class CPlexMIPSolver implements IMIPSolver {
 
     public static void main(String argv[]) {
         if (argv.length < 1 || argv.length > 2) {
-            System.err.println("Usage: edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver <port> <num simultaneous>");
+            logger.error("Usage: edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver <port> <num simultaneous>");
             System.exit(1);
         }
         int port = Integer.parseInt(argv[0]);
