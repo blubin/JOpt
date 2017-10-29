@@ -8,6 +8,8 @@ import edu.harvard.econcs.jopt.solver.mip.CompareType;
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * An example for a multi-commodity transportation model
@@ -15,6 +17,8 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
  * @author Fabio Isler
  */
 public class ComplexExample {
+
+    private static final Logger logger = LogManager.getLogger(ComplexExample.class);
 
     private IMIP mip;
 
@@ -117,8 +121,11 @@ public class ComplexExample {
 
         example.buildMIP(factories, customers, costs, fixedCosts, extraCosts, true);
 
-        System.out.println(example.getMIP());
-        System.out.println(example.solve(new SolverClient()));
+        IMIP mip = example.getMIP();
+        logger.info(mip);
+
+        IMIPResult result = example.solve(new SolverClient());
+        logger.info(result);
     }
 
     public static IMIPResult test(SolverClient client) {

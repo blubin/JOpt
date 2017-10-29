@@ -4,6 +4,8 @@ import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.mip.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * An example for a MIP that includes a piecewise linear function
@@ -11,6 +13,8 @@ import edu.harvard.econcs.jopt.solver.mip.*;
  * @author Fabio Isler
  */
 public class PieceWiseLinearExample {
+
+    private static final Logger logger = LogManager.getLogger(PieceWiseLinearExample.class);
 
     private IMIP mip;
 
@@ -109,8 +113,11 @@ public class PieceWiseLinearExample {
 
         example.buildMIP();
 
-        System.out.println(example.getMIP());
-        System.out.println(example.solve(new SolverClient()));
+        IMIP mip = example.getMIP();
+        logger.info(mip);
+
+        IMIPResult result = example.solve(new SolverClient());
+        logger.info(result);
     }
 
     public static IMIPResult test(SolverClient client) {

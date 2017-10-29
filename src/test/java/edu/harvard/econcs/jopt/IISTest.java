@@ -39,12 +39,16 @@ import edu.harvard.econcs.jopt.solver.mip.MIP;
 import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.7 $ on $Date: 2013/12/04 02:54:09 $
  */
 public class IISTest {
+
+	private static final Logger logger = LogManager.getLogger(IISTest.class);
 
 	public static void main(String[] args) {
 		IMIP mip = new MIP();
@@ -65,6 +69,6 @@ public class IISTest {
 		mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, false);
 		
 	    SolverClient solverClient = new SolverClient("econcs.eecs.harvard.edu", 2000);
-	    System.out.println(solverClient.solve(mip));
+	    logger.info(solverClient.solve(mip));
 	}
 }

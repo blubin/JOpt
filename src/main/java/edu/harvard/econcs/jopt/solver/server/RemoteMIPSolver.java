@@ -41,7 +41,8 @@ import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
-import edu.harvard.econcs.util.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A remote solver that solves a MIP based on a local IMIPSolver
@@ -56,7 +57,7 @@ public class RemoteMIPSolver extends UnicastRemoteObject implements IRemoteMIPSo
 	 */
 	private static final long serialVersionUID = 3257572810506646068L;
 
-	private static Log log = new Log(RemoteMIPSolver.class);
+	private static final Logger logger = LogManager.getLogger(RemoteMIPSolver.class);
 	
 	private IMIPSolver solver;
 	
@@ -66,24 +67,24 @@ public class RemoteMIPSolver extends UnicastRemoteObject implements IRemoteMIPSo
 	}
 	
 	/**
-	 * @see edu.harvard.econcs.jopt.solver.server.IRemoteMIPSolver#solve(edu.harvard.econcs.jopt.solver.IMIP)
+	 * @see edu.harvard.econcs.jopt.solver.server.IRemoteMIPSolver#solve(byte[])
 	 */
 	public IMIPResult solve(byte[] serializedMip) throws MIPException /*, RemoteException */ {
 		String client = "Unknown";
 		try {
 			client = getClientHost();
 		} catch (ServerNotActiveException e) {
-			log.warn("Could not get client host: " + e.getMessage());
+			logger.warn("Could not get client host: " + e.getMessage());
 		}
 		ObjectInputStream ois;
 		IMIP mipObj = null;
 		try {
-			log.trace("Begin de-serialization of " + serializedMip.length + " bytes from " + client);
+			logger.trace("Begin de-serialization of " + serializedMip.length + " bytes from " + client);
 			long time = System.currentTimeMillis();
 			ois = new ObjectInputStream(new ByteArrayInputStream(serializedMip));
 			mipObj = (IMIP)ois.readObject();
 			time = System.currentTimeMillis() - time;
-			log.trace("Finished de-serialiation in " + time + " millis.");
+			logger.trace("Finished de-serialiation in " + time + " millis.");
 		} catch (IOException e) {
 			throw new MIPException("Serialization error", e);
 		} catch (ClassNotFoundException e) {
@@ -92,7 +93,7 @@ public class RemoteMIPSolver extends UnicastRemoteObject implements IRemoteMIPSo
 		long time = System.currentTimeMillis();
 		IMIPResult ret = solver.solve(mipObj);
 		time = System.currentTimeMillis() - time;
-		log.trace("Finished solving MIP for '" + client + "' in " + time + "millis, sending results back");
+		logger.trace("Finished solving MIP for '" + client + "' in " + time + "millis, sending results back");
 		return ret;
 	}
 }

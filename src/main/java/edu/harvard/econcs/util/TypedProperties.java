@@ -30,6 +30,9 @@
  */
 package edu.harvard.econcs.util;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Properties;
 
 /**
@@ -45,7 +48,7 @@ import java.util.Properties;
 public class TypedProperties extends Properties {
 	
 	private static final long serialVersionUID = 3761403118801139760L;
-	private static Log log = new Log(TypedProperties.class);
+	private static final Logger logger = LogManager.getLogger(TypedProperties.class);
 	
 	public String getString(String name, String def){
 		return getProperty(name,def);
@@ -58,7 +61,7 @@ public class TypedProperties extends Properties {
 				return def;
 			return Integer.parseInt(val);
 		}catch(NumberFormatException nfe){
-			log.warn("Expected integer in property: "+name);
+			logger.warn("Expected integer in property: "+name);
 		}
 		return def;
 	}
@@ -70,7 +73,7 @@ public class TypedProperties extends Properties {
 				return def;
 			return Long.parseLong(val);
 		}catch(NumberFormatException nfe){
-			log.warn("Expected long in property: "+name);
+			logger.warn("Expected long in property: "+name);
 		}
 		return def;
 	}
@@ -86,7 +89,7 @@ public class TypedProperties extends Properties {
 				return def;
 			return Float.parseFloat(val);
 		}catch(NumberFormatException nfe){
-			log.warn("Expected float in property: "+name);
+			logger.warn("Expected float in property: "+name);
 		}
 		return def;
 	}
@@ -99,7 +102,7 @@ public class TypedProperties extends Properties {
 				return def;
 			return Double.parseDouble(val);
 		}catch(NumberFormatException nfe){
-			log.warn("Expected double in property: "+name);
+			logger.warn("Expected double in property: "+name);
 		}
 		return def;
 	}
@@ -122,7 +125,7 @@ public class TypedProperties extends Properties {
 				val.equals("false"))
 			return false;
 		else
-			log.warn("Expected boolean in property: "+name);
+			logger.warn("Expected boolean in property: "+name);
 		return def;
 	}
 	

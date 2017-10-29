@@ -32,13 +32,12 @@ package edu.harvard.econcs.jopt.solver.server.cplex;
 
 import ilog.concert.IloException;
 import ilog.cplex.IloCplex;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
@@ -47,7 +46,7 @@ import org.slf4j.LoggerFactory;
  **/
 public enum CPLEXInstanceManager {
     INSTANCE;
-    private static final Logger LOGGER = LoggerFactory.getLogger(CPLEXInstanceManager.class);
+    private static final Logger logger = LogManager.getLogger(CPLEXInstanceManager.class);
 
     private int numSimultaneous = 100;
     private BlockingQueue<IloCplex> available = new LinkedBlockingQueue<IloCplex>();
@@ -67,7 +66,7 @@ public enum CPLEXInstanceManager {
             try {
                 cplex = available.take();
             } catch (InterruptedException e) {
-                LOGGER.error("Interrupted while trying to get IloCPlex, resetting", e);
+                logger.error("Interrupted while trying to get IloCPlex, resetting", e);
                 throw new RuntimeException(e);
             }
         }
@@ -81,18 +80,18 @@ public enum CPLEXInstanceManager {
                 return new IloCplex();
             } catch (IloException ex) {
                 if (i < 9) {
-                    LOGGER.warn("Could not get CPLEX instance, retrying", ex);
+                    logger.warn("Could not get CPLEX instance, retrying", ex);
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    LOGGER.warn("Could not get CPLEX instance, giving up", ex);
+                    logger.warn("Could not get CPLEX instance, giving up", ex);
                     return null;
                 }
             } catch (UnsatisfiedLinkError e) {
-                System.err.println("\n---------------------------------------------------\n" +
+                logger.error("\n---------------------------------------------------\n" +
                         "Error encountered while trying to solve MIP with CPLEX:\n" +
                         "The native libraries were not found in the java library path.\n" +
                         "Installing CPLEX should have set the environment variables right. Did you install CPLEX correctly?\n" +
@@ -114,7 +113,7 @@ public enum CPLEXInstanceManager {
             cplex.clearCallbacks();
             cplex.clearModel();
         } catch (IloException e) {
-            LOGGER.error("Exception clearing model: " + e.getMessage(), e);
+            logger.error("Exception clearing model: " + e.getMessage(), e);
 
             cplex.end();
             inUseCount.decrementAndGet();

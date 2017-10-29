@@ -39,7 +39,8 @@ import java.rmi.server.UnicastRemoteObject;
 
 import edu.harvard.econcs.jopt.solver.IMIPSolver;
 import edu.harvard.econcs.jopt.solver.MIPException;
-import edu.harvard.econcs.util.Log;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Benjamin Lubin; Last modified by $Author: blubin $
@@ -51,7 +52,7 @@ public class SolverServer extends UnicastRemoteObject implements ISolverServer {
 	 * 
 	 */
 	private static final long serialVersionUID = 3977583593201872945L;
-	private static Log log = new Log(SolverServer.class);
+	private static final Logger log = LogManager.getLogger(SolverServer.class);
 	private Class solverClass;
 	
 	protected int port;
@@ -63,7 +64,7 @@ public class SolverServer extends UnicastRemoteObject implements ISolverServer {
 	 */
 	public static void createServer(int port, Class solverClass) throws MIPException {
 		try {
-			log.main("Binding server to port: " + port);
+			log.info("Binding server to port: " + port);
 			Registry localreg = LocateRegistry.createRegistry(port);
 			SolverServer server = new SolverServer(port, solverClass);
 			localreg.bind(NAME, server);
@@ -91,13 +92,11 @@ public class SolverServer extends UnicastRemoteObject implements ISolverServer {
 	 * @see edu.harvard.econcs.jopt.solver.server.ISolverServer#getSolver()
 	 */
 	public IRemoteMIPSolver getSolver() throws RemoteException {
-		log.main("Creating a new Solver Instance");
+		log.info("Creating a new Solver Instance");
 		IMIPSolver solver = null;
 		try {
 			solver = (IMIPSolver)solverClass.newInstance();
-		} catch (InstantiationException e) {
-			throw new MIPException("Could not create solver intance", e);
-		} catch (IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException e) {
 			throw new MIPException("Could not create solver intance", e);
 		}
 		return new RemoteMIPSolver(port, solver);

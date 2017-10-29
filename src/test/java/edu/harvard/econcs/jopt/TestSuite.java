@@ -58,7 +58,7 @@ public class TestSuite {
         }
     }
 
-    public static IMIP provideBanalExample() {
+    public static IMIP provideTrivialExample() {
         MIP mip = new MIP();
         Variable v = new Variable("a", VarType.INT, 0, 3);
         mip.add(v);

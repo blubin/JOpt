@@ -39,6 +39,8 @@ import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.MIP;
 import edu.harvard.econcs.jopt.solver.mip.VarType;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Simple JOpt usage example:<br>
@@ -54,6 +56,8 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
  * @since Dec 13, 2005
  **/
 public class SimpleLPExample {
+
+    private static final Logger logger = LogManager.getLogger(SimpleLPExample.class);
 
     private IMIP mip;
 
@@ -93,8 +97,11 @@ public class SimpleLPExample {
     public static void main(String[] argv) {
         SimpleLPExample example = new SimpleLPExample();
         example.buildMIP();
-        System.out.println(example.getMIP());
-        System.out.println(example.solve(new SolverClient()));
+        IMIP mip = example.getMIP();
+        logger.info(mip);
+
+        IMIPResult result = example.solve(new SolverClient());
+        logger.info(result);
     }
 
     public static IMIPResult test(SolverClient client) {
