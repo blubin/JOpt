@@ -201,7 +201,7 @@ public class LPSolveMIPSolver implements IMIPSolver {
             int result = solver.solve();
             if (result == LpSolve.SUBOPTIMAL) {
                 if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
-                    logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions," +
+                    logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions, " +
                             "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
                 } else {
                     throw new MIPException("Solving the MIP timed out, delivering only a suboptimal solution.\n" +
