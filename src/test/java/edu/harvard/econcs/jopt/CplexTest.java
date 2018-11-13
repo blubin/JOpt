@@ -4,11 +4,15 @@ import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
+import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.Assert.fail;
 
@@ -48,4 +52,22 @@ public class CplexTest {
             logger.info("Successfully caught exception for the timeout.");
         }
 	}
+
+	@Test
+    public void testSolutionPool() {
+        IMIP mip = TestSuite.provideComplexExample();
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 5);
+        Set<Variable> decisionVariables = new HashSet<>();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 7; j++) {
+                decisionVariables.add(mip.getVar("x_" + i + j));
+            }
+        }
+        mip.setDecisionVariables(decisionVariables);
+
+        SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
+
+        lpSolveSolverClient.solve(mip);
+    }
 }

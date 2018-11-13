@@ -64,6 +64,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
+    private Collection<Variable> decisionVariables = null;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -71,6 +72,14 @@ public class MIP implements IMIP, Serializable, Cloneable {
 
     // Variables:
     // //////////
+
+    public boolean containsVar(Variable var) {
+        return vars.containsKey(var.getName());
+    }
+    public boolean containsVar(String name) {
+        return vars.containsKey(name);
+    }
+
 
     public Map<String, Variable> getVars() {
         return Collections.unmodifiableMap(vars);
@@ -110,12 +119,21 @@ public class MIP implements IMIP, Serializable, Cloneable {
         }
     }
 
+    // Set of variables needed for SOLUTION_POOL_MODE == 3
+    public Collection<Variable> getDecisionVariables() {
+        return decisionVariables;
+    }
+
+    public void setDecisionVariables(Collection<Variable> sequentialPoolFixedVariables) {
+        this.decisionVariables = sequentialPoolFixedVariables;
+    }
+
     // Proposed Values:
     // ////////////////
 
     private void checkProposedHashMap() {
         if (proposedValuesForVars == null) {
-            proposedValuesForVars = new HashMap<Variable, Object>();
+            proposedValuesForVars = new HashMap<>();
         }
     }
 
@@ -548,6 +566,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
             ret.vars.put(name, val.typedClone());
         }
 
+        checkProposedHashMap();
         ret.proposedValuesForVars = new HashMap();
         for (Variable v : proposedValuesForVars.keySet()) {
             Object val = proposedValuesForVars.get(v);

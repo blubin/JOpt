@@ -51,6 +51,9 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
  **/
 public interface IMIP extends Serializable {
 
+	void setDecisionVariables(Collection<Variable> variables);
+    Collection<Variable> getDecisionVariables();
+
 	// Variables
 	////////////
 	
@@ -58,6 +61,16 @@ public interface IMIP extends Serializable {
 	 * @return a Map from Strings to Variables.
 	 */
 	Map<String,Variable> getVars();
+
+    /**
+     * @return whether the mip contains the variable.
+     */
+    boolean containsVar(Variable var);
+
+    /**
+     * @return whether the mip contains the variable.
+     */
+    boolean containsVar(String name);
 	
 	/** @return the Variable corresponding to the String name. */
 	Variable getVar(String name);
