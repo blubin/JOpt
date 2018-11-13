@@ -765,6 +765,8 @@ public class CPlexMIPSolver implements IMIPSolver {
             return IloCplex.IntParam.SolnPoolReplace;
         } else if (SolveParam.POPULATE_LIMIT.equals(solveParam)) {
             return IloCplex.IntParam.PopulateLim;
+        } else if (SolveParam.DATACHECK.equals(solveParam)) {
+            return IloCplex.Param.Read.DataCheck;
         }
         throw new MIPException("Invalid solve param: " + solveParam);
     }

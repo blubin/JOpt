@@ -228,6 +228,11 @@ public class SolveParam implements Serializable {
      * replacement strategy.
      */
     public static final SolveParam SOLUTION_POOL_REPLACEMENT = new SolveParam(23, Integer.class, "SolutionPoolReplacementStrategy");
+
+    /**
+     * Enables data check by CPLEX. 1 = activated, 2 = activated and show debug information in log
+     */
+    public static final SolveParam DATACHECK = new SolveParam(24, Integer.class, "DataCheck");
     // Internal variables
     // ///////////////////
     /**
@@ -361,6 +366,8 @@ public class SolveParam implements Serializable {
                 return POPULATE_LIMIT;
             case 23:
                 return SOLUTION_POOL_REPLACEMENT;
+            case 24:
+                return DATACHECK;
             case 101:
                 return PROBLEM_FILE;
             case 102:
