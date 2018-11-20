@@ -2,21 +2,21 @@
  * Copyright (c) 2005-2017 Benjamin Lubin
  * Copyright (c) 2005-2017 The President and Fellows of Harvard College
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * - Redistributions of source code must retain the above copyright notice, this
  *   list of conditions and the following disclaimer.
- * 
+ *
  * - Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
- * 
+ *
  * - Neither the name of the copyright holder nor the names of its
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -67,7 +67,7 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * Solves a MIP structure. Should be the only class using CPlex code directly.
- * 
+ *
  * @author Benjamin Lubin; Last modified by $Author: blubin $
  * @version $Revision: 1.39 $ on $Date: 2013/12/04 02:18:20 $
  * @since Apr 2004
@@ -158,82 +158,122 @@ public class CPlexMIPSolver implements IMIPSolver {
         while (!done) {
 
             if (cplex.solve()) {
-
-                if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2 && cplex.isMIP() && mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 0) {
-                    long cplexSolveEnd = System.currentTimeMillis();
-                    double originalSolveLimit = cplex.getParam(DoubleParam.TiLim);
-                    double populateFactor = mip.getDoubleSolveParam(SolveParam.RELATIVE_POOL_SOLVE_TIME, -1);
-                    if (populateFactor >= 0) {
-                        double populateSolveTime = populateFactor * (cplexSolveEnd - startTime) / 1000d;
-                        cplex.setParam(DoubleParam.TiLim, populateSolveTime);
-                    }
-                    cplex.populate();
-                    cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
-                } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
-                    intermediateSolutions = new LinkedList<>();
-                    Collection<Variable> fixedVariables = mip.getDecisionVariables();
-                    if (fixedVariables == null || fixedVariables.isEmpty()) {
-                        throw new MIPException("Please specify a collection of boolean variables "
-                                + "that can be used to distinguish different solutions.");
-                    }
-                    for (Variable var : fixedVariables) {
-                        if (var.getType() != VarType.BOOLEAN) {
-                            throw new MIPException("Currently, only boolean variables can be used to distinguish "
-                                    + "different solutions.");
+                if (cplex.isMIP() && mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 0) {
+                    if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
+                        long cplexSolveEnd = System.currentTimeMillis();
+                        double originalSolveLimit = cplex.getParam(DoubleParam.TiLim);
+                        double populateFactor = mip.getDoubleSolveParam(SolveParam.RELATIVE_POOL_SOLVE_TIME, -1);
+                        if (populateFactor >= 0) {
+                            double populateSolveTime = populateFactor * (cplexSolveEnd - startTime) / 1000d;
+                            cplex.setParam(DoubleParam.TiLim, populateSolveTime);
                         }
-                        if (!mip.containsVar(var)) {
-                            throw new MIPException("MIP does not contain Variable " + var + ".");
+                        cplex.populate();
+                        cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
+                    } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
+                        intermediateSolutions = new LinkedList<>();
+                        Collection<Variable> fixedVariables = mip.getDecisionVariables();
+                        if (fixedVariables == null || fixedVariables.isEmpty()) {
+                            throw new MIPException("Please specify a collection of boolean variables "
+                                    + "that can be used to distinguish different solutions.");
                         }
-                    }
-                    IMIP copyOfMip = mip.typedClone();
-                    // Reset the solution pool such that we can solve sequentially
-                    copyOfMip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
-                    Set<Variable> variables1 = fixedVariables.stream().filter(v -> {
-                        try {
-                            return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 1;
-                        } catch (IloException e) {
-                            logger.warn(e);
-                            return false;
+                        for (Variable var : fixedVariables) {
+                            if (var.getType() != VarType.BOOLEAN) {
+                                throw new MIPException("Currently, only boolean variables can be used to distinguish "
+                                        + "different solutions.");
+                            }
+                            if (!mip.containsVar(var)) {
+                                throw new MIPException("MIP does not contain Variable " + var + ".");
+                            }
                         }
-                    }).collect(Collectors.toSet());
-                    Set<Variable> variables0 = fixedVariables.stream().filter(v -> {
-                        try {
-                            return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 0;
-                        } catch (IloException e) {
-                            logger.warn(e);
-                            return false;
-                        }
-                    }).collect(Collectors.toSet());
-
-                    if (variables1.size() + variables0.size() != fixedVariables.size()) {
-                        throw new MIPException("Some variables got lost on the way...");
-                    }
-
-                    for (int solutionCount = 0; solutionCount < mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0); solutionCount++) {
-                        Variable y = new Variable("y_for_solution_pool_" + solutionCount, VarType.BOOLEAN, 0, 1);
-                        copyOfMip.add(y);
-                        Constraint ones = new Constraint(CompareType.LEQ, variables1.size() - 1 + 1e-8);
-                        variables1.forEach(v -> ones.addTerm(1, v));
-                        ones.addTerm(-MIP.MAX_VALUE, y);
-                        copyOfMip.add(ones);
-
-                        Constraint zeroes = new Constraint(CompareType.GEQ, 1 - 1e-8 - MIP.MAX_VALUE);
-                        variables0.forEach(v -> zeroes.addTerm(1, v));
-                        zeroes.addTerm(-MIP.MAX_VALUE, y);
-                        copyOfMip.add(zeroes);
-
-                        IMIPResult intermediateSolution = solve(copyOfMip);
-                        Map<String, Double> intermediateValues = new HashMap<>();
-                        for (String name : vars.keySet()) {
-                            intermediateValues.put(name, intermediateSolution.getValue(name));
-                        }
-                        intermediateSolutions.add(new IntermediateSolution(intermediateSolution.getObjectiveValue(), intermediateValues));
-
-                        variables1 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 1.1 && intermediateSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
-                        variables0 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 0.1 && intermediateSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
+                        IMIP copyOfMip = mip.typedClone();
+                        // Reset the solution pool such that we can solve sequentially
+                        copyOfMip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
+                        Set<Variable> variables1 = fixedVariables.stream().filter(v -> {
+                            try {
+                                return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 1;
+                            } catch (IloException e) {
+                                logger.warn(e);
+                                return false;
+                            }
+                        }).collect(Collectors.toSet());
+                        Set<Variable> variables0 = fixedVariables.stream().filter(v -> {
+                            try {
+                                return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 0;
+                            } catch (IloException e) {
+                                logger.warn(e);
+                                return false;
+                            }
+                        }).collect(Collectors.toSet());
 
                         if (variables1.size() + variables0.size() != fixedVariables.size()) {
                             throw new MIPException("Some variables got lost on the way...");
+                        }
+
+                        for (int solutionCount = 0; solutionCount < mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0); solutionCount++) {
+                            Variable y = new Variable("y_for_solution_pool_" + solutionCount, VarType.BOOLEAN, 0, 1);
+                            copyOfMip.add(y);
+                            Constraint ones = new Constraint(CompareType.LEQ, variables1.size() - 1 + 1e-8);
+                            variables1.forEach(v -> ones.addTerm(1, v));
+                            ones.addTerm(-MIP.MAX_VALUE, y);
+                            copyOfMip.add(ones);
+
+                            Constraint zeroes = new Constraint(CompareType.GEQ, 1 - 1e-8 - MIP.MAX_VALUE);
+                            variables0.forEach(v -> zeroes.addTerm(1, v));
+                            zeroes.addTerm(-MIP.MAX_VALUE, y);
+                            copyOfMip.add(zeroes);
+
+                            IMIPResult intermediateSolution = solve(copyOfMip);
+                            Map<String, Double> intermediateValues = new HashMap<>();
+                            for (String name : vars.keySet()) {
+                                intermediateValues.put(name, intermediateSolution.getValue(name));
+                            }
+                            intermediateSolutions.add(new IntermediateSolution(intermediateSolution.getObjectiveValue(), intermediateValues));
+
+                            variables1 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 1.1 && intermediateSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
+                            variables0 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 0.1 && intermediateSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
+
+                            if (variables1.size() + variables0.size() != fixedVariables.size()) {
+                                throw new MIPException("Some variables got lost on the way...");
+                            }
+                        }
+                    } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 4) {
+                        logger.info("Solution pool mode 4: This overwrites any user-defined settings " +
+                                "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
+                                "and POPULATE_LIMIT.");
+                        int solutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
+                        cplex.setParam(IntParam.SolnPoolIntensity, 4);
+                        cplex.setParam(IntParam.SolnPoolReplace, 1);
+                        cplex.setParam(IntParam.PopulateLim, solutionPoolCapacity);
+                        cplex.populate();
+                        IloCplex.CplexStatus status = cplex.getCplexStatus();
+                        logger.info("Initial Status: {}", status);
+
+                        while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
+                            /*
+                             * Find the minimal and maximal value in the solution pool.
+                             * The minimal value is the optimal solution, the maximum value
+                             * is the worst of the currently k best solutions. We can set the
+                             * absolute solution pool gap to the difference of the maximum
+                             * and minimum solution, that will make CPLEX stop prematurely in
+                             * case it can prove that no better solutions can be found
+                             */
+                            double min = MIP.MAX_VALUE;
+                            double max = -MIP.MAX_VALUE;
+                            for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
+                                double obj = cplex.getObjValue(solutionNumber);
+                                if (obj < min) min = obj;
+                                if (obj > max) max = obj;
+                            }
+                            cplex.setParam(DoubleParam.SolnPoolAGap, max - min + 1e-6);
+                            cplex.setParam(IntParam.PopulateLim, 5 * solutionPoolCapacity);
+                            cplex.populate();
+                            status = cplex.getCplexStatus();
+                            logger.info(status);
+                        }
+
+                        if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
+                                && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
+                            logger.warn("Status was not 'Optimally Populated', something is wrong! Status: {}", status);
                         }
                     }
                 }
@@ -243,7 +283,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 long endTime = System.currentTimeMillis();
                 solveTime = endTime - startTime;
                 logger.info("Solve time: " + solveTime + " ms");
-                for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext();) {
+                for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext(); ) {
                     String varName = (String) iter.next();
                     if (mip.getVar(varName).ignore()) {
                         logger.debug("Skipping Variable " + varName);
@@ -359,7 +399,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         try {
             IloCplex cplex = CPLEXInstanceManager.INSTANCE.checkOutCplex();
 
-            setControlParams(cplex, mip.getSpecifiedSolveParams(),mip::getSolveParam);
+            setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
             Map<String, IloNumVar> vars = setupVariables(mip, cplex);
             setupConstraints(mip, cplex, vars);
 
@@ -375,8 +415,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         // Setup Variables:
         // ////////////////
 
-        Map<String, IloNumVar> vars = new HashMap<>(); // varName to
-                                                       // IloNumVar
+        Map<String, IloNumVar> vars = new HashMap<>(); // varName to IloNumVar
         int numberOfBooleanAndIntVariables = 0;
 
         IloNumVarType varType = IloNumVarType.Float;
@@ -431,7 +470,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             Variable v;
             VarType type;
 
-            for (; iter.hasNext();) {
+            for (; iter.hasNext(); ) {
                 v = (Variable) iter.next();
                 type = v.getType();
                 varArray[i] = vars.get(v.getName());
@@ -709,7 +748,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                     throw new MIPException(solveParam + ": " + value + ": " + e.toString());
                 }
 
-            } else if (solveParam == SolveParam.DISPLAY_OUTPUT && !(Boolean)getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
+            } else if (solveParam == SolveParam.DISPLAY_OUTPUT && !(Boolean) getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
                 cplex.setOut(null);
             }
         }
@@ -775,7 +814,7 @@ public class CPlexMIPSolver implements IMIPSolver {
      * Gather up the intermediate solutions as they become available. Right now
      * we just keep the latest n elements. Could do priority queue based on
      * objective, instead, depending on requirements.
-     * 
+     *
      * @author blubin
      */
     protected static class IntermediateSolutionGatherer extends IloCplex.MIPInfoCallback {
@@ -807,7 +846,6 @@ public class CPlexMIPSolver implements IMIPSolver {
         /**
          * Return the solution list, but first remove any entry that matches the
          * overall solution.
-         *
          */
         public Queue<IntermediateSolution> getSolutionList() {
 

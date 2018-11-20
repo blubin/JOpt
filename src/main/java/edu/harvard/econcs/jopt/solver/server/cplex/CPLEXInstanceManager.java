@@ -49,11 +49,19 @@ public enum CPLEXInstanceManager {
     private static final Logger logger = LogManager.getLogger(CPLEXInstanceManager.class);
 
     private int numSimultaneous = 100;
-    private BlockingQueue<IloCplex> available = new LinkedBlockingQueue<IloCplex>();
+    private BlockingQueue<IloCplex> available = new LinkedBlockingQueue<>();
     private AtomicInteger inUseCount = new AtomicInteger();
 
     public void setNumSimultaneous(int numSimultaneous) {
         this.numSimultaneous = numSimultaneous;
+    }
+
+    public void clear() {
+        for (IloCplex cplex : available) {
+            cplex.end();
+        }
+        inUseCount = new AtomicInteger();
+        available = new LinkedBlockingQueue<>();
     }
 
     public IloCplex checkOutCplex() {
@@ -108,7 +116,14 @@ public enum CPLEXInstanceManager {
         if (cplex == null) {
             return;
         }
-        try {
+        /*
+         * FIXME:
+         * Some parameters don't seem to be reset by this (e.g. solution pool absolute gap),
+         * which results in weird behavior when solving multiple MIPs in a row.
+         * @Ben, do you have an idea why this is the case? Why is it necessary to keep
+         * previous instances in the queue?
+         */
+        /*try {
             cplex.getParameterSet().clear();
             cplex.clearCallbacks();
             cplex.clearModel();
@@ -119,7 +134,8 @@ public enum CPLEXInstanceManager {
             inUseCount.decrementAndGet();
             return;
         }
-        available.offer(cplex);
+        available.offer(cplex);*/
+        cplex.end();
         inUseCount.decrementAndGet();
     }
 }

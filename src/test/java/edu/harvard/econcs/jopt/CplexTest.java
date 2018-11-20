@@ -1,9 +1,11 @@
 package edu.harvard.econcs.jopt;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
+import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
+import edu.harvard.econcs.jopt.solver.mip.Solution;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import org.apache.logging.log4j.LogManager;
@@ -11,9 +13,12 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -54,10 +59,18 @@ public class CplexTest {
 	}
 
 	@Test
-    public void testSolutionPool() {
+    public void testSolutionPoolMode3() {
+	    testSolutionPoolMode3(1);
+	    testSolutionPoolMode3(5);
+	    testSolutionPoolMode3(10);
+	    testSolutionPoolMode3(100);
+	    testSolutionPoolMode3(1000);
+    }
+
+    private void testSolutionPoolMode3(int solutionPoolCapacity) {
         IMIP mip = TestSuite.provideComplexExample();
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 5);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, solutionPoolCapacity);
         Set<Variable> decisionVariables = new HashSet<>();
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 7; j++) {
@@ -68,6 +81,83 @@ public class CplexTest {
 
         SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
 
-        lpSolveSolverClient.solve(mip);
+        IMIPResult result = lpSolveSolverClient.solve(mip);
+        ArrayList<Solution> solutions = new ArrayList<>(result.getIntermediateSolutions());
+        assertNonEqualSolutions(solutions);
+    }
+
+
+
+    @Test
+    public void testSolutionPoolMode4() {
+        testSolutionPoolMode4(1);
+        testSolutionPoolMode4(5);
+        testSolutionPoolMode4(10);
+        testSolutionPoolMode4(100);
+        testSolutionPoolMode4(1000);
+    }
+
+    private void testSolutionPoolMode4(int solutionPoolCapacity) {
+        IMIP mip = TestSuite.provideComplexExample();
+        //mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, solutionPoolCapacity);
+
+        SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
+
+        IMIPResult result = lpSolveSolverClient.solve(mip);
+        ArrayList<Solution> solutions = new ArrayList<>(result.getIntermediateSolutions());
+        assertNonEqualSolutions(solutions);
+    }
+
+    @Test
+    public void testSolutionPoolMode3vsMode4() {
+	    /*
+	     * FIXME:
+	     * This fails most probably because mode 4 can find two solutions that have different
+	     * values in non-decisive variables -> Same allocation, different solution
+	     */
+        IMIP mipMode3 = TestSuite.provideComplexExample();
+        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
+        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+
+        Set<Variable> decisionVariables = new HashSet<>();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 7; j++) {
+                decisionVariables.add(mipMode3.getVar("x_" + i + j));
+            }
+        }
+        mipMode3.setDecisionVariables(decisionVariables);
+
+        SolverClient clientMode3 = new SolverClient(new CPlexMIPSolver());
+
+        IMIPResult resultMode3 = clientMode3.solve(mipMode3);
+        ArrayList<Solution> solutionsMode3 = new ArrayList<>(resultMode3.getIntermediateSolutions());
+        assertNonEqualSolutions(solutionsMode3);
+
+        IMIP mipMode4 = TestSuite.provideComplexExample();
+        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+
+        SolverClient clientMode4 = new SolverClient(new CPlexMIPSolver());
+
+        IMIPResult resultMode4 = clientMode4.solve(mipMode4);
+        ArrayList<Solution> solutionsMode4 = new ArrayList<>(resultMode4.getIntermediateSolutions());
+        assertNonEqualSolutions(solutionsMode4);
+
+        assertEquals(solutionsMode3.stream().mapToDouble(Solution::getObjectiveValue).sum(),
+                solutionsMode4.stream().mapToDouble(Solution::getObjectiveValue).sum(), 1e-6);
+    }
+
+    private void assertNonEqualSolutions(ArrayList<Solution> solutions) {
+        for (int i = 0; i < solutions.size(); i++) {
+            Solution sol1 = solutions.get(i);
+            for (int j = 0; j < solutions.size(); j++) {
+                if (i != j) {
+                    Solution sol2 = solutions.get(j);
+                    assertNotEquals(sol1.getValues(), sol2.getValues());
+                }
+            }
+        }
     }
 }
