@@ -158,6 +158,36 @@ public class CPlexMIPSolver implements IMIPSolver {
         while (!done) {
 
             if (cplex.solve()) {
+                for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext(); ) {
+                    String varName = (String) iter.next();
+                    if (mip.getVar(varName).ignore()) {
+                        logger.debug("Skipping Variable " + varName);
+                        continue;
+                    }
+                    IloNumVar numVar = vars.get(varName);
+                    logger.debug(numVar + " : " + varName);
+                    try {
+                        if (numVar.getType().equals(IloNumVarType.Float)) {
+                            values.put(varName, new Double(cplex.getValue(numVar)));
+                        } else {
+                            values.put(varName, new Double((int) Math.round(cplex.getValue(numVar))));
+                        }
+                    } catch (Exception e) {
+                        // This 'cause of a strange exception we're
+                        // seeing...
+                        e.printStackTrace();
+                        throw new MIPException("Exception talking to CPLEX: " + e.getMessage() + "\n\n Occured while processing variable: " + numVar
+                                + "\n\nThis exception usually occurs because you have inserted a variable in your LP/MIP"
+                                + "\nthat never shows up in a constraint. (CPLEX wonders why you declared the variable"
+                                + "\nin the first place.) To see if this is the case, before running your solve, consider"
+                                + "\ninserting the line: System.out.println(yourMip.toString()); As a warning, a mip.toString"
+                                + "\ncan be very slow with large problems, and in general, you should avoid making this call"
+                                + "\nif you are concerned about performance. If, for some reason, you WANT to insert variables"
+                                + "\nthat aren't bounded, you at least need to explicitly throw in a constraint bounding the"
+                                + "\nvariable by -infinity and infinity -- but this is more likely a bug in your user code.");
+                    }
+                    logger.debug("var " + varName + ": " + values.get(varName));
+                }
                 if (cplex.isMIP() && mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 0) {
                     if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
                         long cplexSolveEnd = System.currentTimeMillis();
@@ -171,6 +201,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
+                        poolSolutions.add(new PoolSolution(cplex.getObjValue(), values)); // Add optimal solution first
                         Collection<Variable> variablesOfInterest = mip.getVariablesOfInterest();
                         if (variablesOfInterest == null || variablesOfInterest.isEmpty()) {
                             throw new MIPException("Please specify a collection of boolean variables "
@@ -209,7 +240,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             throw new MIPException("Some variables got lost on the way...");
                         }
 
-                        for (int solutionCount = 0; solutionCount < mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0); solutionCount++) {
+                        for (int solutionCount = 1; solutionCount < mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0); solutionCount++) {
                             Variable y = new Variable("y_for_solution_pool_" + solutionCount, VarType.BOOLEAN, 0, 1);
                             copyOfMip.add(y);
                             Constraint ones = new Constraint(CompareType.LEQ, variables1.size() - 1 + 1e-8);
@@ -246,7 +277,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.setParam(IntParam.PopulateLim, solutionPoolCapacity);
                         cplex.populate();
                         IloCplex.CplexStatus status = cplex.getCplexStatus();
-                        logger.info("Initial Status: {}", status);
+                        logger.debug("Initial Status: {}", status);
 
                         while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
                             /*
@@ -268,7 +299,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             cplex.setParam(IntParam.PopulateLim, 5 * solutionPoolCapacity);
                             cplex.populate();
                             status = cplex.getCplexStatus();
-                            logger.info(status);
+                            logger.debug("Status: {}", status);
                         }
 
                         if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
@@ -283,36 +314,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                 long endTime = System.currentTimeMillis();
                 solveTime = endTime - startTime;
                 logger.info("Solve time: " + solveTime + " ms");
-                for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext(); ) {
-                    String varName = (String) iter.next();
-                    if (mip.getVar(varName).ignore()) {
-                        logger.debug("Skipping Variable " + varName);
-                        continue;
-                    }
-                    IloNumVar numVar = vars.get(varName);
-                    logger.debug(numVar + " : " + varName);
-                    try {
-                        if (numVar.getType().equals(IloNumVarType.Float)) {
-                            values.put(varName, new Double(cplex.getValue(numVar)));
-                        } else {
-                            values.put(varName, new Double((int) Math.round(cplex.getValue(numVar))));
-                        }
-                    } catch (Exception e) {
-                        // This 'cause of a strange exception we're
-                        // seeing...
-                        e.printStackTrace();
-                        throw new MIPException("Exception talking to CPLEX: " + e.getMessage() + "\n\n Occured while processing variable: " + numVar
-                                + "\n\nThis exception usually occurs because you have inserted a variable in your LP/MIP"
-                                + "\nthat never shows up in a constraint. (CPLEX wonders why you declared the variable"
-                                + "\nin the first place.) To see if this is the case, before running your solve, consider"
-                                + "\ninserting the line: System.out.println(yourMip.toString()); As a warning, a mip.toString"
-                                + "\ncan be very slow with large problems, and in general, you should avoid making this call"
-                                + "\nif you are concerned about performance. If, for some reason, you WANT to insert variables"
-                                + "\nthat aren't bounded, you at least need to explicitly throw in a constraint bounding the"
-                                + "\nvariable by -infinity and infinity -- but this is more likely a bug in your user code.");
-                    }
-                    logger.debug("var " + varName + ": " + values.get(varName));
-                }
                 if (!cplex.isMIP() && mip.getBooleanSolveParam(SolveParam.CALC_DUALS, false)) {
                     constraintidsToDuals = new HashMap<>();
                     for (Constraint constraint : constraintsToIloConstraints.keySet()) {
