@@ -34,8 +34,7 @@ import java.io.Serializable;
 import java.util.Queue;
 
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
-import edu.harvard.econcs.jopt.solver.mip.IntermediateSolution;
-import edu.harvard.econcs.jopt.solver.mip.Solution;
+import edu.harvard.econcs.jopt.solver.mip.PoolSolution;
 
 /**
  * The result of running a linear or mixed integer program
@@ -44,7 +43,7 @@ import edu.harvard.econcs.jopt.solver.mip.Solution;
  * @version $Revision: 1.10 $ on $Date: 2013/12/03 23:24:23 $
  * @since Apr 12, 2004
  **/
-public interface IMIPResult extends Serializable,Solution {
+public interface IMIPResult extends Serializable, ISolution {
 	
 	 
 	
@@ -57,6 +56,6 @@ public interface IMIPResult extends Serializable,Solution {
 	/** Dump the results out to std out, using the MIP to make it pretty **/
 	String toString(IMIP mip);
 	
-	/** Get the Queue of intermediate solutions, if available **/
-	Queue<IntermediateSolution> getIntermediateSolutions();
+	/** Get the Queue of pool solutions, if available **/
+	Queue<PoolSolution> getPoolSolutions();
 }

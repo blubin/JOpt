@@ -195,7 +195,7 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam SOLUTION_POOL_INTENSITY = new SolveParam(20, Integer.class, "SolutionPoolIntensity");
     /**
-     * Number of intermediate solutions to capture. 0 turns of populate.
+     * Number of pool solutions to capture. 0 turns off populate.
      * Defaults to 0.
      **/
     public static final SolveParam SOLUTION_POOL_CAPACITY = new SolveParam(21, Integer.class, "SolutionPoolCapacity");
@@ -268,7 +268,10 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam CALC_DUALS = new SolveParam(106, Boolean.class, "CalcDuals", true);
     /**
-     * 0 (default) is none 1 is callback 2 is solution pool
+     * 0 (default): none
+     * 1: callback (it collects intermediate solutions along the way with no additional effort)
+     * 2: solution pool as implemented by the CPLEX populate() call
+     * 3: solution pool that uses CPLEX populate() iteratively to find the k best solutions
      */
     public static final SolveParam SOLUTION_POOL_MODE = new SolveParam(107, Integer.class, "SolPoolMode", true);
     /**

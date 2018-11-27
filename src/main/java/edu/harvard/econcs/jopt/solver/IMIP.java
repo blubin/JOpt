@@ -51,12 +51,9 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
  **/
 public interface IMIP extends Serializable {
 
-	void setDecisionVariables(Collection<Variable> variables);
-    Collection<Variable> getDecisionVariables();
 
 	// Variables
 	////////////
-	
 	/**
 	 * @return a Map from Strings to Variables.
 	 */
@@ -71,19 +68,19 @@ public interface IMIP extends Serializable {
      * @return whether the mip contains the variable.
      */
     boolean containsVar(String name);
-	
+
 	/** @return the Variable corresponding to the String name. */
 	Variable getVar(String name);
-	
-	/** 
+
+	/**
 	 * Adds a variable to the MIP formulation. Depending on the implementation
 	 * you may find that this variable doesn't show up in the solver. (For instance
 	 * if there is no reference to the variable in any constraint
 	 * @return the string representation of the variable
 	 */
 	String add(Variable var);
-	
-	/** 
+
+	/**
 	 * Removes a variable from the MIP formulation. Depending on the implementation
 	 * this may not actually communicate with the solver, if this variable is unused
 	 * by the solver.
@@ -95,9 +92,22 @@ public interface IMIP extends Serializable {
 	 */
 	int getNumVars();
 
+	/**
+	 * Variables of interest can be used for finding the k best solutions to an optimization
+	 * in combination with SOLUTION_POOL_MODE = 3. They form the set of variables that distinguish different solutions
+	 * in the context of the MIP. For example, in an auction, these variables could be the allocation variables.
+	 * @param variables The variables of interest. Currently, only boolean variables are supported.
+	 */
+	void setVariablesOfInterest(Collection<Variable> variables);
+
+	/**
+	 * @return the variables of interest if defined, else null
+	 */
+	Collection<Variable> getVariablesOfInterest();
+
 	// Proposed Variable Values:
-	////////////////////////////	
-	
+	////////////////////////////
+
 	/** Sets proposed value for this variable */
 	void proposeValue(Variable var, double value);
 	
@@ -151,7 +161,6 @@ public interface IMIP extends Serializable {
 	
 	/**
 	 * Adds a Term to the objective function.
-	 * @param term
 	 */
 	void addObjectiveTerm(double coefficient, Variable var);
 	
@@ -179,7 +188,6 @@ public interface IMIP extends Serializable {
 
 	/**
 	 * Adds a Term to the objective function.
-	 * @param term
 	 */
 	void addObjectiveTerm(double coefficient, Variable varA, Variable varB);
 

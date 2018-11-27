@@ -30,17 +30,19 @@
  */
 package edu.harvard.econcs.jopt.solver.mip;
 
+import edu.harvard.econcs.jopt.solver.ISolution;
+
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Map;
 
-public class IntermediateSolution implements Serializable, Solution {
+public class PoolSolution implements Serializable, ISolution {
 
     private static final long serialVersionUID = -7265174347585717488L;
     private double objectiveValue;
     private final Map<String, Double> values;
 
-    public IntermediateSolution(double objectiveValue, Map<String, Double> values) {
+    public PoolSolution(double objectiveValue, Map<String, Double> values) {
         this.objectiveValue = objectiveValue;
         this.values = values;
     }
@@ -58,7 +60,7 @@ public class IntermediateSolution implements Serializable, Solution {
     /*
      * (non-Javadoc)
      * 
-     * @see edu.harvard.econcs.jopt.solver.mip.Solution#getValues()
+     * @see edu.harvard.econcs.jopt.solver.ISolution#getValues()
      */
     @Override
     public Map<String, Double> getValues() {
@@ -69,7 +71,7 @@ public class IntermediateSolution implements Serializable, Solution {
      * (non-Javadoc)
      * 
      * @see
-     * edu.harvard.econcs.jopt.solver.mip.Solution#getValue(edu.harvard.econcs
+     * edu.harvard.econcs.jopt.solver.ISolution#getValue(edu.harvard.econcs
      * .jopt.solver.mip.Variable)
      */
     @Override
@@ -81,7 +83,7 @@ public class IntermediateSolution implements Serializable, Solution {
      * (non-Javadoc)
      * 
      * @see
-     * edu.harvard.econcs.jopt.solver.mip.Solution#getValue(java.lang.String)
+     * edu.harvard.econcs.jopt.solver.ISolution#getValue(java.lang.String)
      */
     @Override
     public double getValue(String varName) {
@@ -94,7 +96,7 @@ public class IntermediateSolution implements Serializable, Solution {
 
     public String toString() {
         StringBuffer sb = new StringBuffer();
-        sb.append("IntermediateSolution: ");
+        sb.append("PoolSolution: ");
         sb.append("Variables: \n");
         int varNamePadLength = 50;
         int zeroVars = 0;
@@ -129,7 +131,7 @@ public class IntermediateSolution implements Serializable, Solution {
     }
 
     public boolean equal(Object other) {
-        Solution otherSolution = (Solution) other;
+        ISolution otherSolution = (ISolution) other;
         return this.objectiveValue == otherSolution.getObjectiveValue() && getValues().equals(otherSolution.getValues());
     }
 

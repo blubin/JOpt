@@ -150,7 +150,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         Map<String, Double> values = new HashMap<>();
         boolean done = false;
         IntermediateSolutionGatherer solutionListener = null;
-        Queue<IntermediateSolution> intermediateSolutions = null;
+        Queue<PoolSolution> poolSolutions = null;
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 1) {
             solutionListener = new IntermediateSolutionGatherer(vars, mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0));
             cplex.use(solutionListener);
@@ -170,13 +170,13 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.populate();
                         cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
-                        intermediateSolutions = new LinkedList<>();
-                        Collection<Variable> fixedVariables = mip.getDecisionVariables();
-                        if (fixedVariables == null || fixedVariables.isEmpty()) {
+                        poolSolutions = new LinkedList<>();
+                        Collection<Variable> variablesOfInterest = mip.getVariablesOfInterest();
+                        if (variablesOfInterest == null || variablesOfInterest.isEmpty()) {
                             throw new MIPException("Please specify a collection of boolean variables "
                                     + "that can be used to distinguish different solutions.");
                         }
-                        for (Variable var : fixedVariables) {
+                        for (Variable var : variablesOfInterest) {
                             if (var.getType() != VarType.BOOLEAN) {
                                 throw new MIPException("Currently, only boolean variables can be used to distinguish "
                                         + "different solutions.");
@@ -188,7 +188,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         IMIP copyOfMip = mip.typedClone();
                         // Reset the solution pool such that we can solve sequentially
                         copyOfMip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
-                        Set<Variable> variables1 = fixedVariables.stream().filter(v -> {
+                        Set<Variable> variables1 = variablesOfInterest.stream().filter(v -> {
                             try {
                                 return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 1;
                             } catch (IloException e) {
@@ -196,7 +196,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                 return false;
                             }
                         }).collect(Collectors.toSet());
-                        Set<Variable> variables0 = fixedVariables.stream().filter(v -> {
+                        Set<Variable> variables0 = variablesOfInterest.stream().filter(v -> {
                             try {
                                 return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 0;
                             } catch (IloException e) {
@@ -205,7 +205,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             }
                         }).collect(Collectors.toSet());
 
-                        if (variables1.size() + variables0.size() != fixedVariables.size()) {
+                        if (variables1.size() + variables0.size() != variablesOfInterest.size()) {
                             throw new MIPException("Some variables got lost on the way...");
                         }
 
@@ -222,17 +222,17 @@ public class CPlexMIPSolver implements IMIPSolver {
                             zeroes.addTerm(-MIP.MAX_VALUE, y);
                             copyOfMip.add(zeroes);
 
-                            IMIPResult intermediateSolution = solve(copyOfMip);
-                            Map<String, Double> intermediateValues = new HashMap<>();
+                            IMIPResult poolSolution = solve(copyOfMip);
+                            Map<String, Double> poolValues = new HashMap<>();
                             for (String name : vars.keySet()) {
-                                intermediateValues.put(name, intermediateSolution.getValue(name));
+                                poolValues.put(name, poolSolution.getValue(name));
                             }
-                            intermediateSolutions.add(new IntermediateSolution(intermediateSolution.getObjectiveValue(), intermediateValues));
+                            poolSolutions.add(new PoolSolution(poolSolution.getObjectiveValue(), poolValues));
 
-                            variables1 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 1.1 && intermediateSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
-                            variables0 = fixedVariables.stream().filter(v -> intermediateSolution.getValue(v) <= 0.1 && intermediateSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
+                            variables1 = variablesOfInterest.stream().filter(v -> poolSolution.getValue(v) <= 1.1 && poolSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
+                            variables0 = variablesOfInterest.stream().filter(v -> poolSolution.getValue(v) <= 0.1 && poolSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
 
-                            if (variables1.size() + variables0.size() != fixedVariables.size()) {
+                            if (variables1.size() + variables0.size() != variablesOfInterest.size()) {
                                 throw new MIPException("Some variables got lost on the way...");
                             }
                         }
@@ -362,37 +362,37 @@ public class CPlexMIPSolver implements IMIPSolver {
         }
 
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) != 3) {
-            intermediateSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<>();
-            intermediateSolutions.addAll(findIntermediateSolutions(cplex, vars));
+            poolSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<>();
+            poolSolutions.addAll(findPoolSolutions(cplex, vars));
         }
 
         MIPResult res = new MIPResult(objValue, values, constraintidsToDuals);
-        res.setIntermediateSolutions(intermediateSolutions);
+        res.setPoolSolutions(poolSolutions);
         res.setSolveTime(solveTime);
         return res;
     }
 
-    private Queue<IntermediateSolution> findIntermediateSolutions(IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
+    private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
 
-        Queue<IntermediateSolution> intermediateSolutions = new LinkedList<>();
-        logger.debug("Found {} intermediate solutions", cplex.getSolnPoolNsolns());
+        Queue<PoolSolution> poolSolutions = new LinkedList<>();
+        logger.debug("Found {} pool solutions", cplex.getSolnPoolNsolns());
         for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
-            Map<String, Double> interMediateValues = new HashMap<>();
+            Map<String, Double> poolValues = new HashMap<>();
             for (String name : vars.keySet()) {
                 IloNumVar var = vars.get(name);
                 try {
-                    interMediateValues.put(name, cplex.getValue(var, solutionNumber));
+                    poolValues.put(name, cplex.getValue(var, solutionNumber));
                 } catch (IloException e) {
                     throw new MIPException("Couldn't get incumbent value.", e);
                 }
             }
             try {
-                intermediateSolutions.add(new IntermediateSolution(cplex.getObjValue(solutionNumber), interMediateValues));
+                poolSolutions.add(new PoolSolution(cplex.getObjValue(solutionNumber), poolValues));
             } catch (IloException e) {
                 throw new MIPException("Couldn't get incumbent objective value.", e);
             }
         }
-        return intermediateSolutions;
+        return poolSolutions;
     }
 
     public void exportToDisk(IMIP mip, Path path) {
@@ -811,8 +811,8 @@ public class CPlexMIPSolver implements IMIPSolver {
     }
 
     /**
-     * Gather up the intermediate solutions as they become available. Right now
-     * we just keep the latest n elements. Could do priority queue based on
+     * Gather up the intermediate solutions as they become available and store them as PoolSolutions.
+     * Right now we just keep the latest n elements. Could do priority queue based on
      * objective, instead, depending on requirements.
      *
      * @author blubin
@@ -824,7 +824,7 @@ public class CPlexMIPSolver implements IMIPSolver {
          * http://commons.apache.org/proper/commons-collections/javadocs/api-
          * release/index.html
          */
-        private Queue<IntermediateSolution> solutions = new LinkedList<IntermediateSolution>();
+        private Queue<PoolSolution> solutions = new LinkedList<PoolSolution>();
         private int numIntermediateSolutions;
         private Map<String, IloNumVar> vars;
 
@@ -847,12 +847,12 @@ public class CPlexMIPSolver implements IMIPSolver {
          * Return the solution list, but first remove any entry that matches the
          * overall solution.
          */
-        public Queue<IntermediateSolution> getSolutionList() {
+        public Queue<PoolSolution> getSolutionList() {
 
             return solutions;
         }
 
-        private IntermediateSolution createSolution() {
+        private PoolSolution createSolution() {
             Map<String, Double> values = new HashMap<String, Double>();
             for (String name : vars.keySet()) {
                 IloNumVar var = vars.get(name);
@@ -863,7 +863,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 }
             }
             try {
-                return new IntermediateSolution(getIncumbentObjValue(), values);
+                return new PoolSolution(getIncumbentObjValue(), values);
             } catch (IloException e) {
                 throw new MIPException("Couldn't get incumbent objective value.", e);
             }

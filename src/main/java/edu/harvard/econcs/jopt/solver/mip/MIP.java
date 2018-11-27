@@ -64,7 +64,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
-    private Collection<Variable> decisionVariables = null;
+    private Collection<Variable> variablesOfInterest = null;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -119,13 +119,12 @@ public class MIP implements IMIP, Serializable, Cloneable {
         }
     }
 
-    // Set of variables needed for SOLUTION_POOL_MODE == 3
-    public Collection<Variable> getDecisionVariables() {
-        return decisionVariables;
+    public Collection<Variable> getVariablesOfInterest() {
+        return variablesOfInterest;
     }
 
-    public void setDecisionVariables(Collection<Variable> sequentialPoolFixedVariables) {
-        this.decisionVariables = sequentialPoolFixedVariables;
+    public void setVariablesOfInterest(Collection<Variable> variablesOfInterest) {
+        this.variablesOfInterest = variablesOfInterest;
     }
 
     // Proposed Values:

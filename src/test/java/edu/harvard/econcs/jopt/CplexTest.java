@@ -5,7 +5,7 @@ import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
-import edu.harvard.econcs.jopt.solver.mip.Solution;
+import edu.harvard.econcs.jopt.solver.ISolution;
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import org.apache.logging.log4j.LogManager;
@@ -71,18 +71,18 @@ public class CplexTest {
         IMIP mip = TestSuite.provideComplexExample();
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, solutionPoolCapacity);
-        Set<Variable> decisionVariables = new HashSet<>();
+        Set<Variable> variablesOfInterest = new HashSet<>();
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 7; j++) {
-                decisionVariables.add(mip.getVar("x_" + i + j));
+                variablesOfInterest.add(mip.getVar("x_" + i + j));
             }
         }
-        mip.setDecisionVariables(decisionVariables);
+        mip.setVariablesOfInterest(variablesOfInterest);
 
         SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
 
         IMIPResult result = lpSolveSolverClient.solve(mip);
-        ArrayList<Solution> solutions = new ArrayList<>(result.getIntermediateSolutions());
+        ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions);
     }
 
@@ -106,7 +106,7 @@ public class CplexTest {
         SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
 
         IMIPResult result = lpSolveSolverClient.solve(mip);
-        ArrayList<Solution> solutions = new ArrayList<>(result.getIntermediateSolutions());
+        ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions);
     }
 
@@ -121,18 +121,18 @@ public class CplexTest {
         mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
         mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
 
-        Set<Variable> decisionVariables = new HashSet<>();
+        Set<Variable> variablesOfInterest = new HashSet<>();
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 7; j++) {
-                decisionVariables.add(mipMode3.getVar("x_" + i + j));
+                variablesOfInterest.add(mipMode3.getVar("x_" + i + j));
             }
         }
-        mipMode3.setDecisionVariables(decisionVariables);
+        mipMode3.setVariablesOfInterest(variablesOfInterest);
 
         SolverClient clientMode3 = new SolverClient(new CPlexMIPSolver());
 
         IMIPResult resultMode3 = clientMode3.solve(mipMode3);
-        ArrayList<Solution> solutionsMode3 = new ArrayList<>(resultMode3.getIntermediateSolutions());
+        ArrayList<ISolution> solutionsMode3 = new ArrayList<>(resultMode3.getPoolSolutions());
         assertNonEqualSolutions(solutionsMode3);
 
         IMIP mipMode4 = TestSuite.provideComplexExample();
@@ -142,19 +142,19 @@ public class CplexTest {
         SolverClient clientMode4 = new SolverClient(new CPlexMIPSolver());
 
         IMIPResult resultMode4 = clientMode4.solve(mipMode4);
-        ArrayList<Solution> solutionsMode4 = new ArrayList<>(resultMode4.getIntermediateSolutions());
+        ArrayList<ISolution> solutionsMode4 = new ArrayList<>(resultMode4.getPoolSolutions());
         assertNonEqualSolutions(solutionsMode4);
 
-        assertEquals(solutionsMode3.stream().mapToDouble(Solution::getObjectiveValue).sum(),
-                solutionsMode4.stream().mapToDouble(Solution::getObjectiveValue).sum(), 1e-6);
+        assertEquals(solutionsMode3.stream().mapToDouble(ISolution::getObjectiveValue).sum(),
+                solutionsMode4.stream().mapToDouble(ISolution::getObjectiveValue).sum(), 1e-6);
     }
 
-    private void assertNonEqualSolutions(ArrayList<Solution> solutions) {
+    private void assertNonEqualSolutions(ArrayList<ISolution> solutions) {
         for (int i = 0; i < solutions.size(); i++) {
-            Solution sol1 = solutions.get(i);
+            ISolution sol1 = solutions.get(i);
             for (int j = 0; j < solutions.size(); j++) {
                 if (i != j) {
-                    Solution sol2 = solutions.get(j);
+                    ISolution sol2 = solutions.get(j);
                     assertNotEquals(sol1.getValues(), sol2.getValues());
                 }
             }
