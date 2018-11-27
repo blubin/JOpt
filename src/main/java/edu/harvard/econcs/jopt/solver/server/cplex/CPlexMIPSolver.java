@@ -373,8 +373,7 @@ public class CPlexMIPSolver implements IMIPSolver {
     }
 
     private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
-
-        Queue<PoolSolution> poolSolutions = new LinkedList<>();
+        LinkedList<PoolSolution> poolSolutions = new LinkedList<>();
         logger.debug("Found {} pool solutions", cplex.getSolnPoolNsolns());
         for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
             Map<String, Double> poolValues = new HashMap<>();
@@ -392,6 +391,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 throw new MIPException("Couldn't get incumbent objective value.", e);
             }
         }
+        poolSolutions.sort(Comparator.comparingDouble(PoolSolution::getObjectiveValue));
         return poolSolutions;
     }
 
