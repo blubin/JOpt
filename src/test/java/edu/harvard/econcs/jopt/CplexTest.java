@@ -149,6 +149,39 @@ public class CplexTest {
                 solutionsMode4.stream().mapToDouble(ISolution::getObjectiveValue).sum(), 1e-6);
     }
 
+    @Test
+    public void testSimpleExampleMode4() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+
+        mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        IMIPResult result = client.solve(mip);
+        ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
+        assertNonEqualSolutions(solutions);
+    }
+
+    @Test
+    public void testSimpleExampleMode3() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+
+        Set<Variable> variablesOfInterest = new HashSet<>();
+        for (int i = 1; i <= 10; i++) {
+            variablesOfInterest.add(mip.getVar("x" + i));
+        }
+        mip.setVariablesOfInterest(variablesOfInterest);
+        mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        IMIPResult result = client.solve(mip);
+        ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
+        assertNonEqualSolutions(solutions);
+    }
+
     private void assertNonEqualSolutions(ArrayList<ISolution> solutions) {
         for (int i = 0; i < solutions.size(); i++) {
             ISolution sol1 = solutions.get(i);

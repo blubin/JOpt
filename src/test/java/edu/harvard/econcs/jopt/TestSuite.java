@@ -127,6 +127,45 @@ public class TestSuite {
                 true);
     }
 
+    public static IMIP provideSimpleExample() {
+        IMIP mip = new MIP();
+        Variable x1 = new Variable("x1", VarType.BOOLEAN, 0, 1); mip.add(x1);
+        Variable x2 = new Variable("x2", VarType.BOOLEAN, 0, 1); mip.add(x2);
+        Variable x3 = new Variable("x3", VarType.BOOLEAN, 0, 1); mip.add(x3);
+        Variable x4 = new Variable("x4", VarType.BOOLEAN, 0, 1); mip.add(x4);
+        Variable x5 = new Variable("x5", VarType.BOOLEAN, 0, 1); mip.add(x5);
+        Variable x6 = new Variable("x6", VarType.BOOLEAN, 0, 1); mip.add(x6);
+        Variable x7 = new Variable("x7", VarType.BOOLEAN, 0, 1); mip.add(x7);
+        Variable x8 = new Variable("x8", VarType.BOOLEAN, 0, 1); mip.add(x8);
+        Variable x9 = new Variable("x9", VarType.BOOLEAN, 0, 1); mip.add(x9);
+        Variable x10 = new Variable("x10", VarType.BOOLEAN, 0, 1); mip.add(x10);
+
+        mip.addObjectiveTerm(128, x1);
+        mip.addObjectiveTerm(256, x2);
+        mip.addObjectiveTerm(2, x3);
+        mip.addObjectiveTerm(32, x4);
+        mip.addObjectiveTerm(8, x5);
+        mip.addObjectiveTerm(16, x6);
+        mip.addObjectiveTerm(4, x7);
+        mip.addObjectiveTerm(1, x8);
+        mip.addObjectiveTerm(512, x9);
+        mip.addObjectiveTerm(64, x10);
+
+        Constraint c1 = new Constraint(CompareType.LEQ, 999); mip.add(c1);
+        c1.addTerm(128, x1);
+        c1.addTerm(256, x2);
+        c1.addTerm(2, x3);
+        c1.addTerm(32, x4);
+        c1.addTerm(8, x5);
+        c1.addTerm(16, x6);
+        c1.addTerm(4, x7);
+        c1.addTerm(1, x8);
+        c1.addTerm(512, x9);
+        c1.addTerm(64, x10);
+
+        return mip;
+    }
+
     private static double[] convertDoubles(ArrayList<Double> doubles) {
         double[] ret = new double[doubles.size()];
         Iterator<Double> iterator = doubles.iterator();
