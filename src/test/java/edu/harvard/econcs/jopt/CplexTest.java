@@ -212,23 +212,17 @@ public class CplexTest {
 
     @Test
     public void testSimpleExampleMode3vsMode4WithIrrelevantVariables() {
-	    /*
-	     * This test fails because Mode 4 does not have the context information of mode 3, thus regarding
-	     * a change only in the irrelevant variable as a new solution.
-	     * Sum of all objective values in mode 3: 4950.0
-	     * Sum of all objective values in mode 4: 784.0
-	     */
         IMIP mip = TestSuite.provideSimpleExample();
-        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.INT, 0, MIP.MAX_VALUE);
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
         mip.add(irrelevantVariable);
-        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 5);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
         irrelevantConstraint.addTerm(1, irrelevantVariable);
         mip.add(irrelevantConstraint);
 
         IMIP mipMode3 = mip.typedClone();
         logger.info("MIP Mode 3:\n{}", mipMode3);
         mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
-        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         for (int i = 1; i <= 10; i++) {
@@ -243,14 +237,60 @@ public class CplexTest {
         IMIP mipMode4 = mip.typedClone();
         logger.info("MIP Mode 4:\n{}", mipMode4);
         mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
-        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
 
         SolverClient clientMode4 = new SolverClient(new CPlexMIPSolver());
         IMIPResult resultMode4 = clientMode4.solve(mipMode4);
         ArrayList<ISolution> solutionsMode4 = new ArrayList<>(resultMode4.getPoolSolutions());
 
-        assertEquals(solutionsMode3.stream().mapToDouble(ISolution::getObjectiveValue).sum(),
-                solutionsMode4.stream().mapToDouble(ISolution::getObjectiveValue).sum(), 1e-6);
+        // Make sure that the solutions have the structure we expect (two solutions in mode 4 for one solution in mode 3)
+        int countForMode4 = 0;
+        for (int i = 0; i < 5; i++) {
+            assertEquals(solutionsMode3.get(i).getObjectiveValue(), solutionsMode4.get(countForMode4++).getObjectiveValue(), 1e-6);
+            assertEquals(solutionsMode3.get(i).getObjectiveValue(), solutionsMode4.get(countForMode4++).getObjectiveValue(), 1e-6);
+        }
+    }
+
+    @Test
+    public void testSimpleExampleMode3vsMode4WithIrrelevantVariablesFullSet() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
+        mip.add(irrelevantVariable);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
+        irrelevantConstraint.addTerm(1, irrelevantVariable);
+        mip.add(irrelevantConstraint);
+
+        IMIP mipMode3 = mip.typedClone();
+        logger.info("MIP Mode 3:\n{}", mipMode3);
+        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 3);
+        mipMode3.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
+
+        Set<Variable> variablesOfInterest = new HashSet<>();
+        for (int i = 1; i <= 10; i++) {
+            variablesOfInterest.add(mipMode3.getVar("x" + i));
+        }
+        // Add irrelevant variable as well
+        variablesOfInterest.add(irrelevantVariable);
+        mipMode3.setVariablesOfInterest(variablesOfInterest);
+
+        SolverClient clientMode3 = new SolverClient(new CPlexMIPSolver());
+        IMIPResult resultMode3 = clientMode3.solve(mipMode3);
+        ArrayList<ISolution> solutionsMode3 = new ArrayList<>(resultMode3.getPoolSolutions());
+
+        IMIP mipMode4 = mip.typedClone();
+        logger.info("MIP Mode 4:\n{}", mipMode4);
+        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mipMode4.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
+
+        SolverClient clientMode4 = new SolverClient(new CPlexMIPSolver());
+        IMIPResult resultMode4 = clientMode4.solve(mipMode4);
+        ArrayList<ISolution> solutionsMode4 = new ArrayList<>(resultMode4.getPoolSolutions());
+
+        // Make sure that the solutions are now equal
+        int countForMode4 = 0;
+        for (int i = 0; i < 10; i++) {
+            assertEquals(solutionsMode3.get(i).getObjectiveValue(), solutionsMode4.get(countForMode4++).getObjectiveValue(), 1e-6);
+        }
     }
 
     private void assertNonEqualSolutions(ArrayList<ISolution> solutions) {
