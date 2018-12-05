@@ -123,7 +123,8 @@ public enum CPLEXInstanceManager {
          * @Ben, do you have an idea why this is the case? Why is it necessary to keep
          * previous instances in the queue?
          */
-        /*try {
+        try {
+            cplex.setParam(IloCplex.DoubleParam.SolnPoolAGap, 1.0e+75); // Actively reset to default value
             cplex.getParameterSet().clear();
             cplex.clearCallbacks();
             cplex.clearModel();
@@ -134,8 +135,7 @@ public enum CPLEXInstanceManager {
             inUseCount.decrementAndGet();
             return;
         }
-        available.offer(cplex);*/
-        cplex.end();
+        available.offer(cplex);
         inUseCount.decrementAndGet();
     }
 }
