@@ -117,11 +117,9 @@ public enum CPLEXInstanceManager {
             return;
         }
         /*
-         * FIXME:
-         * Some parameters don't seem to be reset by this (e.g. solution pool absolute gap),
-         * which results in weird behavior when solving multiple MIPs in a row.
-         * @Ben, do you have an idea why this is the case? Why is it necessary to keep
-         * previous instances in the queue?
+         * TODO:
+         * Some parameters don't seem to be reset by the clear() call (e.g. solution pool absolute gap),
+         * which results in unexpected behavior when solving multiple MIPs in a row.
          */
         try {
             cplex.setParam(IloCplex.DoubleParam.SolnPoolAGap, 1.0e+75); // Actively reset to default value
