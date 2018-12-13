@@ -271,36 +271,63 @@ public class CPlexMIPSolver implements IMIPSolver {
                         logger.info("Solution pool mode 4: This overwrites any user-defined settings " +
                                 "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
                                 "and POPULATE_LIMIT.");
-                        int solutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
+                        boolean complexProblem = false;
+                        if (mip.getVariablesOfInterest() != null && mip.getVariablesOfInterest().size() < mip.getNumVars()) {
+                            complexProblem = true;
+                        }
+                        int finalSolutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
+                        int tempSolutionPoolCapacity = finalSolutionPoolCapacity;
+                        if (complexProblem) {
+                            tempSolutionPoolCapacity = (int) Math.round(finalSolutionPoolCapacity * mip.getSolutionPoolCapacityMultiplier());
+                            cplex.setParam(IntParam.SolnPoolCapacity, tempSolutionPoolCapacity);
+                        }
                         cplex.setParam(IntParam.SolnPoolIntensity, 4);
                         cplex.setParam(IntParam.SolnPoolReplace, 1);
-                        cplex.setParam(IntParam.PopulateLim, solutionPoolCapacity);
+                        cplex.setParam(IntParam.PopulateLim, tempSolutionPoolCapacity);
                         cplex.populate();
                         IloCplex.CplexStatus status = cplex.getCplexStatus();
                         logger.debug("Initial Status: {}", status);
 
+
+                        int count = 0;
+                        double min = MIP.MAX_VALUE;
+                        double max = -MIP.MAX_VALUE;
                         while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
-                            /*
-                             * Find the minimal and maximal value in the solution pool.
-                             * The minimal value is the optimal solution, the maximum value
-                             * is the worst of the currently k best solutions. We can set the
-                             * absolute solution pool gap to the difference of the maximum
-                             * and minimum solution, that will make CPLEX stop prematurely in
-                             * case it can prove that no better solutions can be found
-                             */
-                            double min = MIP.MAX_VALUE;
-                            double max = -MIP.MAX_VALUE;
-                            for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
-                                double obj = cplex.getObjValue(solutionNumber);
-                                if (obj < min) min = obj;
-                                if (obj > max) max = obj;
+                            if (complexProblem) {
+                                clearDuplicates(mip, vars, cplex);
                             }
-                            cplex.setParam(DoubleParam.SolnPoolAGap, max - min + 1e-6);
-                            cplex.setParam(IntParam.PopulateLim, 5 * solutionPoolCapacity);
+
+                            // If it's a complex problem and solutionPoolSize < solutionPoolCapacity,
+                            // skip the absGap and directly adjust populate limit
+                            int solutionsInPool = cplex.getSolnPoolNsolns();
+                            if (!complexProblem || solutionsInPool >= finalSolutionPoolCapacity) {
+                                /*
+                                 * Find the minimal and maximal value in the solution pool.
+                                 * The minimal value is the optimal solution, the maximum value
+                                 * is the worst of the currently k best solutions. We can set the
+                                 * absolute solution pool gap to the difference of the maximum
+                                 * and minimum solution, that will make CPLEX stop prematurely in
+                                 * case it can prove that no better solutions can be found
+                                 */
+                                min = MIP.MAX_VALUE;
+                                max = -MIP.MAX_VALUE;
+                                for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
+                                    double obj = cplex.getObjValue(solutionNumber);
+                                    if (obj < min) min = obj;
+                                    if (obj > max) max = obj;
+                                }
+                                cplex.setParam(DoubleParam.SolnPoolAGap, max - min + 1e-6);
+                            }
                             cplex.populate();
                             status = cplex.getCplexStatus();
                             logger.debug("Status: {}", status);
+                            count++;
                         }
+                        // FIXME: Is it necessary to clear duplicates again at the end?
+                        // Thought behind it: It seems like in the last round, a lot of the solutions are gathered.
+                        // However, also after clearing the duplicates here, some duplicates still seem to remain...
+                        // clearDuplicates(mip, vars, cplex);
+                        logger.info("Made {} refinements. Final MIN: {}, Final MAX: {}.", count, min, max);
 
                         if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
                                 && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
@@ -364,7 +391,7 @@ public class CPlexMIPSolver implements IMIPSolver {
 
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) != 3) {
             poolSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<>();
-            poolSolutions.addAll(findPoolSolutions(cplex, vars));
+            poolSolutions.addAll(findPoolSolutions(cplex, vars, mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0)));
         }
 
         MIPResult res = new MIPResult(objValue, values, constraintidsToDuals);
@@ -373,27 +400,43 @@ public class CPlexMIPSolver implements IMIPSolver {
         return res;
     }
 
-    private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
+    private void clearDuplicates(IMIP mip, Map<String, IloNumVar> vars, IloCplex cplex) {
+        List<Integer> duplicateSolutions = new ArrayList<>();
+        try {
+            for (int i = 0; i < cplex.getSolnPoolNsolns() - 1; ++i) {
+                if (!duplicateSolutions.contains(i)) {
+                    PoolSolution iSol = extractSolution(cplex, vars, i);
+                    for (int j = i + 1; j < cplex.getSolnPoolNsolns(); ++j) {
+                        if (!duplicateSolutions.contains(j)) {
+                            PoolSolution jSol = extractSolution(cplex, vars, j);
+                            if (iSol.isDuplicate(jSol, mip.getVariablesOfInterest())) {
+                                duplicateSolutions.add(j);
+                            }
+                        }
+                    }
+                }
+            }
+            int offset = 0;
+            for (int i : duplicateSolutions) {
+                logger.info("Solutions in pool: {}. i = {}.", cplex.getSolnPoolNsolns(), i);
+                cplex.delSolnPoolSolns(i - offset++, 1);
+                logger.info("AFTER DELETE: Solutions in pool: {}.", cplex.getSolnPoolNsolns());
+            }
+        } catch (IloException e) {
+            throw new MIPException("Couldn't delete duplicates from solution pool.");
+        }
+    }
+
+    private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars, int capacity) throws IloException {
         LinkedList<PoolSolution> poolSolutions = new LinkedList<>();
         logger.debug("Found {} pool solutions", cplex.getSolnPoolNsolns());
         for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
-            Map<String, Double> poolValues = new HashMap<>();
-            for (String name : vars.keySet()) {
-                IloNumVar var = vars.get(name);
-                try {
-                    poolValues.put(name, cplex.getValue(var, solutionNumber));
-                } catch (IloException e) {
-                    throw new MIPException("Couldn't get incumbent value.", e);
-                }
-            }
-            try {
-                poolSolutions.add(new PoolSolution(cplex.getObjValue(solutionNumber), poolValues));
-            } catch (IloException e) {
-                throw new MIPException("Couldn't get incumbent objective value.", e);
-            }
+            poolSolutions.add(extractSolution(cplex, vars, solutionNumber));
         }
-        poolSolutions.sort(Comparator.comparingDouble(PoolSolution::getObjectiveValue));
-        return poolSolutions;
+        return poolSolutions.stream()
+                .sorted(Comparator.comparingDouble(PoolSolution::getObjectiveValue))
+                .limit(capacity)
+                .collect(Collectors.toCollection(LinkedList::new));
     }
 
     public void exportToDisk(IMIP mip, Path path) {
@@ -752,6 +795,19 @@ public class CPlexMIPSolver implements IMIPSolver {
             } else if (solveParam == SolveParam.DISPLAY_OUTPUT && !(Boolean) getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
                 cplex.setOut(null);
             }
+        }
+    }
+
+    private PoolSolution extractSolution(IloCplex cplex, Map<String, IloNumVar> vars, int index) {
+        try {
+            Map<String, Double> poolValues = new HashMap<>();
+            for (String name : vars.keySet()) {
+                IloNumVar var = vars.get(name);
+                poolValues.put(name, cplex.getValue(var, index));
+            }
+            return new PoolSolution(cplex.getObjValue(index), poolValues);
+        } catch (IloException e) {
+            throw new MIPException("Couldn't extract solution.", e);
         }
     }
 

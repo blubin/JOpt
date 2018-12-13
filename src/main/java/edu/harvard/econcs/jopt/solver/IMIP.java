@@ -105,6 +105,20 @@ public interface IMIP extends Serializable {
 	 */
 	Collection<Variable> getVariablesOfInterest();
 
+	/**
+	 * If Solution Pool Mode 4 is used and a subset of variables of interest is chosen,
+	 * we actually create a larger solution pool and finally find the k best solutions in this larger pool.
+	 * The reason for that is that we need to eliminate duplicate solution that only differ in variables that
+	 * are not of interest. To enlarge the solution pool can bring a significant boost to the algorithm, but may
+	 * also introduce an overhead - it is worth trying out different values for this multiplier.
+	 */
+	void setSolutionPoolCapacityMultiplier(double multiplier);
+
+	/**
+	 * @return the solution pool capacity multiplier
+	 */
+	double getSolutionPoolCapacityMultiplier();
+
 	// Proposed Variable Values:
 	////////////////////////////
 
@@ -325,4 +339,5 @@ public interface IMIP extends Serializable {
 	/////////////////////
 	
 	IMIP typedClone();
+
 }

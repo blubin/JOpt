@@ -65,6 +65,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
     private Collection<Variable> variablesOfInterest = null;
+    private double solutionPoolCapacityMultiplier = 1.5;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -125,6 +126,17 @@ public class MIP implements IMIP, Serializable, Cloneable {
 
     public void setVariablesOfInterest(Collection<Variable> variablesOfInterest) {
         this.variablesOfInterest = variablesOfInterest;
+    }
+
+    public double getSolutionPoolCapacityMultiplier() {
+        return solutionPoolCapacityMultiplier;
+    }
+
+    public void setSolutionPoolCapacityMultiplier(double multiplier) {
+        if (multiplier < 1) {
+            throw new MIPException("Solution pool multiplier has to be larger than 1");
+        }
+        solutionPoolCapacityMultiplier = multiplier;
     }
 
     // Proposed Values:

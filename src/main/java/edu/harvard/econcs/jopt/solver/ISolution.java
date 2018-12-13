@@ -32,6 +32,7 @@ package edu.harvard.econcs.jopt.solver;
 
 import edu.harvard.econcs.jopt.solver.mip.Variable;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -61,6 +62,19 @@ public interface ISolution extends Comparable<ISolution> {
      */
     default int compareTo(ISolution o) {
         return Double.compare(getObjectiveValue(), o.getObjectiveValue());
+    }
+
+    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+        double e = 1e-8;
+        for (Variable var : variablesOfInterest) {
+            double thisValue = this.getValue(var);
+            double otherValue = o.getValue(var);
+            if (thisValue < otherValue - e
+                || thisValue > otherValue + e) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
