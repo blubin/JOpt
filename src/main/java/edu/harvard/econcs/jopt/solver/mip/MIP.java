@@ -65,7 +65,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
     private Collection<Variable> variablesOfInterest = null;
-    private double solutionPoolCapacityMultiplier = 1.5;
+    private double solutionPoolCapacityMultiplier = 0.02;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -132,9 +132,15 @@ public class MIP implements IMIP, Serializable, Cloneable {
         return solutionPoolCapacityMultiplier;
     }
 
+    /**
+     * This sets the multiplier that is used to define the number of solutions that are handled per
+     * pool population. It represents the fraction of the solution pool capacity.
+     * FIXME: Find out why there are sometimes not the absolute k best solutions in the pool if this number is too high
+     * @param multiplier
+     */
     public void setSolutionPoolCapacityMultiplier(double multiplier) {
-        if (multiplier < 1) {
-            throw new MIPException("Solution pool multiplier has to be larger than 1");
+        if (multiplier > 1) {
+            throw new MIPException("Solution pool multiplier cannot be larger than 1");
         }
         solutionPoolCapacityMultiplier = multiplier;
     }
