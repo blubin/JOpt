@@ -94,8 +94,9 @@ public interface IMIP extends Serializable {
 
 	/**
 	 * Variables of interest can be used for finding the k best solutions to an optimization
-	 * in combination with SOLUTION_POOL_MODE = 3. They form the set of variables that distinguish different solutions
-	 * in the context of the MIP. For example, in an auction, these variables could be the allocation variables.
+	 * in combination with SOLUTION_POOL_MODE = 3 or SOLUTION_POOL_MODE = 4. They form the set
+	 * of variables that distinguish different solutions in the context of the MIP. For example, in an auction,
+	 * these variables could be the allocation variables.
 	 * @param variables The variables of interest. Currently, only boolean variables are supported.
 	 */
 	void setVariablesOfInterest(Collection<Variable> variables);
@@ -106,11 +107,8 @@ public interface IMIP extends Serializable {
 	Collection<Variable> getVariablesOfInterest();
 
 	/**
-	 * If Solution Pool Mode 4 is used and a subset of variables of interest is chosen,
-	 * we actually create a larger solution pool and finally find the k best solutions in this larger pool.
-	 * The reason for that is that we need to eliminate duplicate solution that only differ in variables that
-	 * are not of interest. To enlarge the solution pool can bring a significant boost to the algorithm, but may
-	 * also introduce an overhead - it is worth trying out different values for this multiplier.
+	 * If Solution Pool Mode 4 is used, this parameter defines the number of solutions that are looked for with
+	 * every step of the algorithm (as a factor of the requested number of solutions).
 	 */
 	void setSolutionPoolCapacityMultiplier(double multiplier);
 
