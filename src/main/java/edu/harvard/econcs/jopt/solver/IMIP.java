@@ -108,7 +108,7 @@ public interface IMIP extends Serializable {
 
 	/**
 	 * If Solution Pool Mode 4 is used, this parameter defines the number of solutions that are looked for with
-	 * every step of the algorithm (as a factor of the requested number of solutions).
+	 * every step of the algorithm (as a multiplier of the requested number of solutions).
 	 */
 	void setSolutionPoolCapacityMultiplier(double multiplier);
 

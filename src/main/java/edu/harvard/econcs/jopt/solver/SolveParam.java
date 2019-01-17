@@ -270,8 +270,9 @@ public class SolveParam implements Serializable {
     /**
      * 0 (default): none
      * 1: callback (it collects intermediate solutions along the way with no additional effort)
-     * 2: solution pool as implemented by the CPLEX populate() call
-     * 3: solution pool that uses CPLEX populate() iteratively to find the k best solutions
+     * 2: solution pool is constructed by a simple CPLEX populate() call
+     * 3: k-best: iteratively fills pool by re-solving the previous MIP but forbidding the old solution via constraints
+     * 4: k-best: uses CPLEX populate() iteratively while adjusting the parameters to find the k best solutions
      */
     public static final SolveParam SOLUTION_POOL_MODE = new SolveParam(107, Integer.class, "SolPoolMode", true);
     /**

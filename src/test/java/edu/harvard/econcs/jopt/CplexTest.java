@@ -147,10 +147,8 @@ public class CplexTest {
 
     private void testSolutionPoolMode4(int solutionPoolCapacity) {
         IMIP mip = TestSuite.provideComplexExample();
-        // mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, solutionPoolCapacity);
-        mip.setSolutionPoolCapacityMultiplier(0.001);
 
         SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
 
@@ -180,20 +178,53 @@ public class CplexTest {
 
     @Test
     public void testSimpleExampleMode4() {
+        testSimpleExampleMode4(2);
+        testSimpleExampleMode4(10);
+        testSimpleExampleMode4(100);
+        testSimpleExampleMode4(200);
+        testSimpleExampleMode4(500);
+        testSimpleExampleMode4(800);
+    }
+
+    private void testSimpleExampleMode4(int capacity) {
         IMIP mip = TestSuite.provideSimpleExample();
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
-
-        mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, capacity);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         IMIPResult result = client.solve(mip);
         ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions);
+        ISolution lastSolution = solutions.get(solutions.size() - 1);
+        assertEquals(capacity - 1, lastSolution.getObjectiveValue(), 1e-10);
+    }
+
+    @Test
+    public void testSimpleExampleMode4NotEnoughSolutions() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 1100);
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        IMIPResult result = client.solve(mip);
+        ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
+        assertNonEqualSolutions(solutions);
+        assertTrue(solutions.size() < 1100);
+        ISolution lastSolution = solutions.get(solutions.size() - 1);
+        assertEquals(999, lastSolution.getObjectiveValue(), 1e-10);
     }
 
     @Test
     public void testMode4WithIrrelevantVariableAndVariablesOfInterest() {
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(2);
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(10);
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(100);
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(200);
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(500);
+        testMode4WithIrrelevantVariableAndVariablesOfInterest(1000);
+    }
+
+    private void testMode4WithIrrelevantVariableAndVariablesOfInterest(int capacity) {
         IMIP mip = TestSuite.provideSimpleExample();
         Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
         mip.add(irrelevantVariable);
@@ -202,19 +233,20 @@ public class CplexTest {
         mip.add(irrelevantConstraint);
 
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 100);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, capacity);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         for (int i = 1; i <= 10; i++) {
             variablesOfInterest.add(mip.getVar("x" + i));
         }
         mip.setVariablesOfInterest(variablesOfInterest);
-        mip.setSolutionPoolCapacityMultiplier(0.02);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         IMIPResult result = client.solve(mip);
         ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions, variablesOfInterest);
+        ISolution lastSolution = solutions.get(solutions.size() - 1);
+        assertEquals(capacity - 1, lastSolution.getObjectiveValue(), 1e-10);
     }
 
     @Test

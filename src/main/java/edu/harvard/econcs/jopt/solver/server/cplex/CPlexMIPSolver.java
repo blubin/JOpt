@@ -152,14 +152,15 @@ public class CPlexMIPSolver implements IMIPSolver {
         IntermediateSolutionGatherer solutionListener = null;
         Queue<PoolSolution> poolSolutions = null;
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 1) {
+            // If we will be using solution pool mode 1, prepare the solution listener
             solutionListener = new IntermediateSolutionGatherer(vars, mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0));
             cplex.use(solutionListener);
         }
         while (!done) {
 
             if (cplex.solve()) {
-                for (Iterator iter = mip.getVars().keySet().iterator(); iter.hasNext(); ) {
-                    String varName = (String) iter.next();
+                // Extract variable values from result
+                for (String varName : mip.getVars().keySet()) {
                     if (mip.getVar(varName).ignore()) {
                         logger.debug("Skipping Variable " + varName);
                         continue;
@@ -168,9 +169,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                     logger.debug(numVar + " : " + varName);
                     try {
                         if (numVar.getType().equals(IloNumVarType.Float)) {
-                            values.put(varName, new Double(cplex.getValue(numVar)));
+                            values.put(varName, cplex.getValue(numVar));
                         } else {
-                            values.put(varName, new Double((int) Math.round(cplex.getValue(numVar))));
+                            values.put(varName, (double) (int) Math.round(cplex.getValue(numVar)));
                         }
                     } catch (Exception e) {
                         // This 'cause of a strange exception we're
@@ -188,7 +189,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                     }
                     logger.debug("var " + varName + ": " + values.get(varName));
                 }
+                // Handle the pool if requested
                 if (cplex.isMIP() && mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 1) {
+                    // Solution pool mode 2: Just use the regular populate() feature from CPLEX
                     if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
                         long cplexSolveEnd = System.currentTimeMillis();
                         double originalSolveLimit = cplex.getParam(DoubleParam.TiLim);
@@ -199,6 +202,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         }
                         cplex.populate();
                         cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
+                    // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
                         poolSolutions.add(new PoolSolution(cplex.getObjValue(), values)); // Add optimal solution first
@@ -267,6 +271,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                 throw new MIPException("Some variables got lost on the way...");
                             }
                         }
+                    // Solution pool mode 4: Use CPLEX features and parameters to fill the pool while reusing the previous search tree
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 4) {
                         logger.info("Solution pool mode 4: This overwrites any user-defined settings " +
                                 "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
@@ -286,8 +291,6 @@ public class CPlexMIPSolver implements IMIPSolver {
 
 
                         int count = 0;
-                        double min = MIP.MAX_VALUE;
-                        double max = -MIP.MAX_VALUE;
                         while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
                             logger.debug("Start of round {}.", count + 1);
                             printPool(cplex);
@@ -312,8 +315,8 @@ public class CPlexMIPSolver implements IMIPSolver {
                                  * and minimum solution, that will make CPLEX stop prematurely in
                                  * case it can prove that no better solutions can be found
                                  */
-                                min = MIP.MAX_VALUE;
-                                max = -MIP.MAX_VALUE;
+                                double min = MIP.MAX_VALUE;
+                                double max = -MIP.MAX_VALUE;
                                 for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
                                     double obj = cplex.getObjValue(solutionNumber);
                                     if (obj < min) min = obj;
@@ -323,7 +326,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                 logger.debug("Setting the absolute solution pool gap to {} in round {}.", absSolPoolGap, count + 1);
                                 cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
                             }
-                            int popLim = (int) (mip.getSolutionPoolCapacityMultiplier() * finalSolutionPoolCapacity) + 2;
+                            int popLim = (int) (mip.getSolutionPoolCapacityMultiplier() * finalSolutionPoolCapacity);
                             cplex.setParam(IntParam.PopulateLim, popLim);
 
                             cplex.populate();
@@ -335,7 +338,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             clearDuplicates(mip, vars, cplex);
                         }
                         truncatePool(mip, cplex);
-                        logger.info("Made {} refinements. Final MIN: {}, Final MAX: {}.", count, min, max);
+                        logger.info("Pool filled. Made {} refinement(s).", count);
 
                         if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
                                 && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
@@ -397,6 +400,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             }
         }
 
+        // In solution pool mode 3, we filled the pool manually and don't extract any pool solutions from the CPLEX result
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) != 3) {
             poolSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<>();
             poolSolutions.addAll(findPoolSolutions(cplex, vars, mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0)));
@@ -481,7 +485,12 @@ public class CPlexMIPSolver implements IMIPSolver {
 
     private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars, int capacity) throws IloException {
         LinkedList<PoolSolution> poolSolutions = new LinkedList<>();
-        logger.debug("Found {} pool solutions", cplex.getSolnPoolNsolns());
+        int solnPoolNsolns = cplex.getSolnPoolNsolns();
+        logger.debug("Found {} pool solutions", solnPoolNsolns);
+        if (logger.isWarnEnabled() && solnPoolNsolns < capacity) {
+            logger.warn("CPLEX only collected {} solutions in the pool, but {} have been requested. Most probably, " +
+                    "there are only {} feasible solutions.", solnPoolNsolns, capacity, solnPoolNsolns);
+        }
         for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
             poolSolutions.add(extractSolution(cplex, vars, solutionNumber));
         }
