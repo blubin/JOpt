@@ -552,12 +552,12 @@ public class CPlexMIPSolver implements IMIPSolver {
 
     private void proposeValues(IMIP mip, IloCplex cplex, Map<String, IloNumVar> vars, int numberOfBooleanAndIntVariables) throws IloException {
         if (!mip.getVarsWithProposedValues().isEmpty()) {
-            IloNumVar varArray[];
-            double valArray[];
-            boolean bZeroMissingVariables = mip.getBooleanSolveParam(SolveParam.ZERO_MISSING_PROPOSED, new Boolean(false));
+            IloNumVar[] varArray;
+            double[] valArray;
+            boolean bZeroMissingVariables = mip.getBooleanSolveParam(SolveParam.ZERO_MISSING_PROPOSED, false);
             Iterator iter;
 
-            if (bZeroMissingVariables == true) {
+            if (bZeroMissingVariables) {
                 // In this case, prepare to zero out all missing Int/Bools
                 varArray = new IloNumVar[mip.getVars().size()];
                 valArray = new double[mip.getVars().size()];
@@ -575,7 +575,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             Variable v;
             VarType type;
 
-            for (; iter.hasNext(); ) {
+            while (iter.hasNext()) {
                 v = (Variable) iter.next();
                 type = v.getType();
                 varArray[i] = vars.get(v.getName());
@@ -592,11 +592,9 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                     logger.debug("proposing value: " + v.getName() + "\t" + valArray[i]);
                 } else {
-                    if (bZeroMissingVariables == true) {
-                        valArray[i] = 0;
-                        if ((type == VarType.BOOLEAN) || (type == VarType.INT)) {
-                            numberOfProposedBooleanAndIntVariables++;
-                        }
+                    valArray[i] = 0;
+                    if ((type == VarType.BOOLEAN) || (type == VarType.INT)) {
+                        numberOfProposedBooleanAndIntVariables++;
                     }
                 }
                 i++;
