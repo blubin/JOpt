@@ -195,7 +195,7 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam SOLUTION_POOL_INTENSITY = new SolveParam(20, Integer.class, "SolutionPoolIntensity");
     /**
-     * Number of intermediate solutions to capture. 0 turns of populate.
+     * Number of pool solutions to capture. 0 turns off populate.
      * Defaults to 0.
      **/
     public static final SolveParam SOLUTION_POOL_CAPACITY = new SolveParam(21, Integer.class, "SolutionPoolCapacity");
@@ -228,6 +228,11 @@ public class SolveParam implements Serializable {
      * replacement strategy.
      */
     public static final SolveParam SOLUTION_POOL_REPLACEMENT = new SolveParam(23, Integer.class, "SolutionPoolReplacementStrategy");
+
+    /**
+     * Enables data check by CPLEX. 1 = activated, 2 = activated and show debug information in log
+     */
+    public static final SolveParam DATACHECK = new SolveParam(24, Integer.class, "DataCheck");
     // Internal variables
     // ///////////////////
     /**
@@ -263,7 +268,11 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam CALC_DUALS = new SolveParam(106, Boolean.class, "CalcDuals", true);
     /**
-     * 0 (default) is none 1 is callback 2 is solution pool
+     * 0 (default): none
+     * 1: callback (it collects intermediate solutions along the way with no additional effort)
+     * 2: solution pool is constructed by a simple CPLEX populate() call
+     * 3: k-best: iteratively fills pool by re-solving the previous MIP but forbidding the old solution via constraints
+     * 4: k-best: uses CPLEX populate() iteratively while adjusting the parameters to find the k best solutions
      */
     public static final SolveParam SOLUTION_POOL_MODE = new SolveParam(107, Integer.class, "SolPoolMode", true);
     /**
@@ -361,6 +370,8 @@ public class SolveParam implements Serializable {
                 return POPULATE_LIMIT;
             case 23:
                 return SOLUTION_POOL_REPLACEMENT;
+            case 24:
+                return DATACHECK;
             case 101:
                 return PROBLEM_FILE;
             case 102:

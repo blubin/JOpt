@@ -64,6 +64,8 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
+    private Collection<Variable> variablesOfInterest = null;
+    private double solutionPoolCapacityMultiplier = 2;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -71,6 +73,14 @@ public class MIP implements IMIP, Serializable, Cloneable {
 
     // Variables:
     // //////////
+
+    public boolean containsVar(Variable var) {
+        return vars.containsKey(var.getName());
+    }
+    public boolean containsVar(String name) {
+        return vars.containsKey(name);
+    }
+
 
     public Map<String, Variable> getVars() {
         return Collections.unmodifiableMap(vars);
@@ -110,12 +120,36 @@ public class MIP implements IMIP, Serializable, Cloneable {
         }
     }
 
+    public Collection<Variable> getVariablesOfInterest() {
+        return variablesOfInterest;
+    }
+
+    public void setVariablesOfInterest(Collection<Variable> variablesOfInterest) {
+        this.variablesOfInterest = variablesOfInterest;
+    }
+
+    public double getSolutionPoolCapacityMultiplier() {
+        return solutionPoolCapacityMultiplier;
+    }
+
+    /**
+     * This sets the multiplier that is used to define the number of solutions that are handled per
+     * pool population.
+     * @param multiplier
+     */
+    public void setSolutionPoolCapacityMultiplier(double multiplier) {
+        if (multiplier < 1) {
+            throw new MIPException("Solution pool multiplier cannot be less than 1");
+        }
+        solutionPoolCapacityMultiplier = multiplier;
+    }
+
     // Proposed Values:
     // ////////////////
 
     private void checkProposedHashMap() {
         if (proposedValuesForVars == null) {
-            proposedValuesForVars = new HashMap<Variable, Object>();
+            proposedValuesForVars = new HashMap<>();
         }
     }
 
@@ -548,6 +582,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
             ret.vars.put(name, val.typedClone());
         }
 
+        checkProposedHashMap();
         ret.proposedValuesForVars = new HashMap();
         for (Variable v : proposedValuesForVars.keySet()) {
             Object val = proposedValuesForVars.get(v);
