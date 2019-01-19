@@ -38,6 +38,14 @@ serveral solvers** used by the end user.</p>
  * Support for multiple solutions (solution pools) under CPlex.
  * Support for MIQCQP under CPlex
  * Client/server support with load balancing (when compiled for it)
+ 
+ ## Usage
+ JOpt is released on Maven Central: https://mvnrepository.com/artifact/edu.harvard.eecs/jopt
+ 
+ To use it, just include it in your Maven / Gradle dependencies.
+ 
+ Alternatively, if you don't use Maven nor Gradle, you can also simply download the newest version's JAR and include it in your project.
+ The JAR is published along with the [release](https://github.com/blubin/JOpt/releases/).
 
 ## Limitations
 
