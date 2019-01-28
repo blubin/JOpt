@@ -58,4 +58,14 @@ public interface IMIPResult extends Serializable, ISolution {
 	
 	/** Get the Queue of pool solutions, if available **/
 	Queue<PoolSolution> getPoolSolutions();
+
+	/**
+	 * @return the relative difference in the objective value compared to the relaxation of the problem
+	 */
+	double getRelativeGap();
+
+	/**
+	 * @return the absolute difference in the objective value compared to the relaxation of the problem
+	 */
+	double getAbsoluteGap();
 }

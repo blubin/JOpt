@@ -168,7 +168,6 @@ public class CplexTest {
             variablesOfInterest.add(mip.getVar("x" + i));
         }
         mip.setVariablesOfInterest(variablesOfInterest);
-        mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         IMIPResult result = client.solve(mip);

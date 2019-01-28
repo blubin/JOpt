@@ -53,6 +53,8 @@ public class MIPResult implements IMIPResult {
     private Map<String, Double> values = new HashMap();
     private Map<Constraint, Double> constraintidstoDuals = new HashMap();
     private long solveTime;
+    private double relativeGap;
+    private double absoluteGap;
     private Queue<PoolSolution> poolSolutionList = null;
 
     public MIPResult(double objectiveValue, Map<String,Double> values, Map<Constraint,Double> constraintidsToDuals) {
@@ -110,6 +112,24 @@ public class MIPResult implements IMIPResult {
     @Override
     public Queue<PoolSolution> getPoolSolutions() {
         return poolSolutionList;
+    }
+
+    @Override
+    public double getRelativeGap() {
+        return relativeGap;
+    }
+
+    public void setRelativeGap(double relativeGap) {
+        this.relativeGap = relativeGap;
+    }
+
+    @Override
+    public double getAbsoluteGap() {
+        return absoluteGap;
+    }
+
+    public void setAbsoluteGap(double absoluteGap) {
+        this.absoluteGap = absoluteGap;
     }
 
     public void setPoolSolutions(Queue<PoolSolution> lst) {

@@ -287,6 +287,14 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam ACCEPT_SUBOPTIMAL = new SolveParam(109, Boolean.class, "AcceptSuboptimal", true);
 
+    /**
+     * If Solution Pool Mode 4 is used, this parameter defines the number of solutions that are looked for with
+     * every step of the algorithm (as a multiplier of the requested number of solutions).
+     * Defaults to 2: That means that after the first step of the mode 4 algorithm (and thus after setting
+     * first boundaries for the solutions), CPLEX is looking for twice as many solutions as the requested pool capacity.
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_MULTIPLIER = new SolveParam(110, Double.class, "SolutionPoolMode4Multiplier", true);
+
     // Other stuff below:
     // //////////////////
 
@@ -390,6 +398,8 @@ public class SolveParam implements Serializable {
                 return RELATIVE_POOL_SOLVE_TIME;
             case 109:
                 return ACCEPT_SUBOPTIMAL;
+            case 110:
+                return SOLUTION_POOL_MODE_4_MULTIPLIER;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);
