@@ -194,14 +194,14 @@ public class CPlexMIPSolver implements IMIPSolver {
                     // Solution pool mode 2: Just use the regular populate() feature from CPLEX
                     if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
                         long cplexSolveEnd = System.currentTimeMillis();
-                        double originalSolveLimit = cplex.getParam(DoubleParam.TiLim);
+                        double originalSolveLimit = cplex.getParam(DoubleParam.TimeLimit);
                         double populateFactor = mip.getDoubleSolveParam(SolveParam.RELATIVE_POOL_SOLVE_TIME, -1);
                         if (populateFactor >= 0) {
                             double populateSolveTime = populateFactor * (cplexSolveEnd - startTime) / 1000d;
-                            cplex.setParam(DoubleParam.TiLim, populateSolveTime);
+                            cplex.setParam(DoubleParam.TimeLimit, populateSolveTime);
                         }
                         cplex.populate();
-                        cplex.setParam(DoubleParam.TiLim, originalSolveLimit);
+                        cplex.setParam(DoubleParam.TimeLimit, originalSolveLimit);
                     // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
@@ -280,6 +280,16 @@ public class CPlexMIPSolver implements IMIPSolver {
                                     "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
                                     "and POPULATE_LIMIT.");
                         }
+                        if (mip.getDoubleSolveParam(SolveParam.TIME_LIMIT, -1) > -1) {
+                            logger.info("You defined a time limit of {}s for this run. " +
+                                    "To populate the solution pool, the same time limit is used.",
+                                    mip.getDoubleSolveParam(SolveParam.TIME_LIMIT));
+                        }
+                        long startTimeOfSolutionPool = System.currentTimeMillis();
+                        double originalTimeLimit = cplex.getParam(DoubleParam.TimeLimit);
+                        // We disable the time limit of the individual runs, because we handle it manually
+                        cplex.setParam(DoubleParam.TimeLimit, 1e75);
+
                         double solutionPoolMultiplier = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_MULTIPLIER, 2d);
                         boolean complexProblem = false;
                         if (mip.getVariablesOfInterest() != null && mip.getVariablesOfInterest().size() < mip.getNumVars()) {
@@ -290,13 +300,23 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.setParam(IntParam.SolnPoolIntensity, 4);
                         cplex.setParam(IntParam.SolnPoolReplace, 1);
                         cplex.setParam(IntParam.PopulateLim, finalSolutionPoolCapacity);
+                        logger.debug("Calling populate()");
                         cplex.populate();
                         IloCplex.CplexStatus status = cplex.getCplexStatus();
                         logger.debug("Initial Status: {}", status);
 
-
+                        double absoluteSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE, 0);
+                        double relativeSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE, 0);
+                        if (cplex.getObjValue() == 0 && relativeSolutionPoolGapTolerance > 0) {
+                            logger.warn("You have set a relative solution pool gap tolerance, but the best solution has " +
+                                    "an objective value of zero. A relative tolerance will not work in that case, try " +
+                                    "an absolute tolerance instead.");
+                        }
                         int count = 0;
+                        double absSolPoolGap = 1e75;
+                        double relSolPoolGap = 1e75;
                         while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
+
                             logger.debug("Start of round {}.", count + 1);
                             printPool(cplex);
                             if (complexProblem) {
@@ -327,16 +347,33 @@ public class CPlexMIPSolver implements IMIPSolver {
                                     if (obj < min) min = obj;
                                     if (obj > max) max = obj;
                                 }
-                                double absSolPoolGap = max - min + 1e-6;
+                                absSolPoolGap = max - min + 1e-6;
+                                relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(cplex.getObjValue()));
                                 logger.debug("Setting the absolute solution pool gap to {} in round {}.", absSolPoolGap, count + 1);
                                 cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
                             }
                             int popLim = (int) (solutionPoolMultiplier * finalSolutionPoolCapacity);
                             cplex.setParam(IntParam.PopulateLim, popLim);
-
+                            logger.debug("Calling populate()");
                             cplex.populate();
                             status = cplex.getCplexStatus();
                             logger.debug("Status: {}", status);
+
+                            if (System.currentTimeMillis() - startTimeOfSolutionPool > originalTimeLimit * 1000) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Time limit reached.", count);
+                                break;
+                            }
+                            if (absoluteSolutionPoolGapTolerance > absSolPoolGap) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Absolute solution pool gap is within tolerance.", count);
+                                break;
+                            }
+                            if (relativeSolutionPoolGapTolerance > relSolPoolGap) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Relative solution pool gap is within tolerance.", count);
+                                break;
+                            }
                             count++;
                         }
                         if (complexProblem) {
@@ -347,8 +384,16 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                         if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
                                 && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
-                            logger.warn("Status was not 'Optimally Populated', something is wrong! Status: {}", status);
+                            if (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
+                                logger.info("Filling the solution pool terminated early due to the user settings " +
+                                        "(time limit or absolute/relative solution pool gap). " +
+                                        "Note that this does not guarantee that you have the k best solutions.");
+                            } else {
+                                logger.warn("Final status ({}) is not what was expected." +
+                                        "Maybe something went wrong.", status);
+                            }
                         }
+                        cplex.setParam(DoubleParam.TimeLimit, originalTimeLimit);
                     }
                 }
 
@@ -877,7 +922,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         if (SolveParam.CLOCK_TYPE.equals(solveParam)) {
             return IloCplex.IntParam.ClockType;
         } else if (SolveParam.TIME_LIMIT.equals(solveParam)) {
-            return IloCplex.DoubleParam.TiLim;
+            return IloCplex.DoubleParam.TimeLimit;
         } else if (SolveParam.BARRIER_DISPLAY.equals(solveParam)) {
             return IloCplex.IntParam.BarDisplay;
         } else if (SolveParam.MIN_OBJ_VALUE.equals(solveParam)) {

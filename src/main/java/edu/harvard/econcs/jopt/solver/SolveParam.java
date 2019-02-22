@@ -295,6 +295,21 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam SOLUTION_POOL_MODE_4_MULTIPLIER = new SolveParam(110, Double.class, "SolutionPoolMode4Multiplier", true);
 
+    /**
+     * If Solution Pool Mode 4 is used, this parameter defines the user's tolerance for the absolute gap between the
+     * integer optimal solution and the worst solution currently in the pool.
+     * This allows avoiding a long runtime to find the very best k solutions, if a user is
+     * fine "as long as all the solutions in the pool are within a reasonable range of the optimal solution".
+     *
+     * Defaults to 0 (no tolerance, find the best k solutions within my time limit).
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE = new SolveParam(111, Double.class, "SolutionPoolMode4AbsGapTolerance", true);
+
+    /**
+     * The same as {@link #SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE}, but for the relative gap.
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE = new SolveParam(112, Double.class, "SolutionPoolMode4RelGapTolerance", true);
+
     // Other stuff below:
     // //////////////////
 
@@ -400,6 +415,10 @@ public class SolveParam implements Serializable {
                 return ACCEPT_SUBOPTIMAL;
             case 110:
                 return SOLUTION_POOL_MODE_4_MULTIPLIER;
+            case 111:
+                return SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE;
+            case 112:
+                return SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);

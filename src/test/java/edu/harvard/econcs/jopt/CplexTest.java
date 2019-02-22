@@ -403,6 +403,32 @@ public class CplexTest {
         }
     }
 
+    @Test
+    public void testSettingMode4GapTolerance() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
+        mip.add(irrelevantVariable);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
+        irrelevantConstraint.addTerm(1, irrelevantVariable);
+        mip.add(irrelevantConstraint);
+        Set<Variable> variablesOfInterestMode4 = new HashSet<>();
+        for (int i = 1; i <= 10; i++) {
+            variablesOfInterestMode4.add(mip.getVar("x" + i));
+        }
+        mip.setVariablesOfInterest(variablesOfInterestMode4);
+
+        logger.info("MIP:\n{}", mip);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE, 600.0);
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        // Following the log, it's visible that the solution pool population was terminated early because of
+        // the absolute gap tolerance
+        IMIPResult result = client.solve(mip);
+        System.out.println(result);
+    }
+
     private void assertNonEqualSolutions(ArrayList<ISolution> solutions, Collection<Variable> variablesOfInterest) {
         for (int i = 0; i < solutions.size(); i++) {
             ISolution sol1 = solutions.get(i);
