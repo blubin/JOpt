@@ -34,6 +34,8 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Comparing based on Objective Value
@@ -64,17 +66,27 @@ public interface ISolution extends Comparable<ISolution> {
         return Double.compare(getObjectiveValue(), o.getObjectiveValue());
     }
 
-    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+    default boolean isDuplicateAdvanced(ISolution o, Collection<Collection<Variable>> variableSetsOfInterest) {
+        if (variableSetsOfInterest == null) return false;
         double e = 1e-8;
-        for (Variable var : variablesOfInterest) {
-            double thisValue = this.getValue(var);
-            double otherValue = o.getValue(var);
-            if (thisValue < otherValue - e
-                || thisValue > otherValue + e) {
+        for (Collection<Variable> variableCollection : variableSetsOfInterest) {
+            double thisSum = variableCollection.stream().mapToDouble(this::getValue).sum();
+            double otherSum = variableCollection.stream().mapToDouble(o::getValue).sum();
+            if (thisSum < otherSum - e
+                || thisSum > otherSum + e) {
                 return false;
             }
         }
         return true;
+    }
+
+    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+        if (variablesOfInterest == null) return false;
+        return isDuplicateAdvanced(o,
+                variablesOfInterest
+                        .stream()
+                        .map(v -> Stream.of(v).collect(Collectors.toSet()))
+                        .collect(Collectors.toSet()));
     }
 
 }

@@ -16,6 +16,8 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
@@ -105,6 +107,72 @@ public class CplexTest {
         variablesOfInterest.add(new Variable("B", VarType.INT, 0, MIP.MAX_VALUE));
         variablesOfInterest.add(new Variable("C", VarType.INT, 0, MIP.MAX_VALUE));
         assertFalse(first.isDuplicate(second, variablesOfInterest));
+    }
+
+    @Test
+    public void testDuplicateAdvancedCheckTrue() {
+        Map<String, Double> poolValuesFirst = new HashMap<>();
+        poolValuesFirst.put("A1", 1.0);
+        poolValuesFirst.put("A2", 0.0);
+        poolValuesFirst.put("B", 2.0);
+        poolValuesFirst.put("C", 3.0);
+
+        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+
+        Map<String, Double> poolValuesSecond = new HashMap<>();
+        poolValuesSecond.put("A1", 0.0);
+        poolValuesSecond.put("A2", 1.0);
+        poolValuesSecond.put("B", 2.0);
+        poolValuesSecond.put("C", 3.0);
+
+        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+
+        Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
+        Collection<Variable> setA = Stream
+                .of(new Variable("A1", VarType.INT, 0, MIP.MAX_VALUE),
+                    new Variable("A2", VarType.INT, 0, MIP.MAX_VALUE))
+                .collect(Collectors.toSet());
+        variableSetsOfInterest.add(setA);
+        variableSetsOfInterest.add(
+                Stream.of(new Variable("B", VarType.INT, 0, MIP.MAX_VALUE)).collect(Collectors.toSet())
+        );
+        variableSetsOfInterest.add(
+                Stream.of(new Variable("C", VarType.INT, 0, MIP.MAX_VALUE)).collect(Collectors.toSet())
+        );
+        assertTrue(first.isDuplicateAdvanced(second, variableSetsOfInterest));
+    }
+
+    @Test
+    public void testDuplicateAdvancedCheckFalse() {
+        Map<String, Double> poolValuesFirst = new HashMap<>();
+        poolValuesFirst.put("A1", 1.0);
+        poolValuesFirst.put("A2", 2.0);
+        poolValuesFirst.put("B", 2.0);
+        poolValuesFirst.put("C", 3.0);
+
+        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+
+        Map<String, Double> poolValuesSecond = new HashMap<>();
+        poolValuesSecond.put("A1", 1.0);
+        poolValuesSecond.put("A2", 2.0);
+        poolValuesSecond.put("B", 2.0);
+        poolValuesSecond.put("C", 3.0);
+
+        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+
+        Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
+        Collection<Variable> setA = Stream
+                .of(new Variable("A1", VarType.INT, 0, MIP.MAX_VALUE),
+                        new Variable("A2", VarType.INT, 0, MIP.MAX_VALUE))
+                .collect(Collectors.toSet());
+        variableSetsOfInterest.add(setA);
+        variableSetsOfInterest.add(
+                Stream.of(new Variable("B", VarType.INT, 0, MIP.MAX_VALUE)).collect(Collectors.toSet())
+        );
+        variableSetsOfInterest.add(
+                Stream.of(new Variable("C", VarType.INT, 0, MIP.MAX_VALUE)).collect(Collectors.toSet())
+        );
+        assertTrue(first.isDuplicateAdvanced(second, variableSetsOfInterest));
     }
 
 	@Test
