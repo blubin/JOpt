@@ -276,14 +276,20 @@ public class CPlexMIPSolver implements IMIPSolver {
                         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_INTENSITY, -1) > -1
                             || mip.getIntSolveParam(SolveParam.SOLUTION_POOL_REPLACEMENT, -1) > -1
                             || mip.getIntSolveParam(SolveParam.POPULATE_LIMIT, -1) > -1) {
-                            logger.info("Solution pool mode 4: This overwrites any user-defined settings " +
+                            logger.info("Solution pool mode 4: This overrides any user-defined settings " +
                                     "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
                                     "and POPULATE_LIMIT.");
                         }
-                        if (mip.getDoubleSolveParam(SolveParam.TIME_LIMIT, -1) > -1) {
+                        double poolTimeLimit = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, -1);
+                        if (mip.getDoubleSolveParam(SolveParam.TIME_LIMIT, -1) > -1 && poolTimeLimit < 0) {
                             logger.info("You defined a time limit of {}s for this run. " +
-                                    "To populate the solution pool, the same time limit is used.",
+                                    "To populate the solution pool, the same time limit is used. " +
+                                    "If you'd like to have a different time limit for populating the solution pool, " +
+                                    "set the SOLUTION_POOL_MODE_4_TIME_LIMIT parameter accordingly.",
                                     mip.getDoubleSolveParam(SolveParam.TIME_LIMIT));
+                            poolTimeLimit = mip.getDoubleSolveParam(SolveParam.TIME_LIMIT);
+                        } else if (poolTimeLimit < 0) {
+                            poolTimeLimit = 1e75;
                         }
                         long startTimeOfSolutionPool = System.currentTimeMillis();
                         double originalTimeLimit = cplex.getParam(DoubleParam.TimeLimit);
@@ -308,9 +314,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                         double absoluteSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE, 0);
                         double relativeSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE, 0);
                         if (cplex.getObjValue() == 0 && relativeSolutionPoolGapTolerance > 0) {
-                            logger.warn("You have set a relative solution pool gap tolerance, but the best solution has " +
-                                    "an objective value of zero. A relative tolerance will not work in that case, try " +
-                                    "an absolute tolerance instead.");
+                            logger.warn("You have set a relative solution pool gap tolerance, but the best" +
+                                    "solution has an objective value of zero. A relative tolerance will not work in" +
+                                    "that case, you must rely on the absolute gap tolerance.");
                         }
                         int count = 0;
                         double absSolPoolGap = 1e75;
@@ -359,7 +365,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             status = cplex.getCplexStatus();
                             logger.debug("Status: {}", status);
 
-                            if (System.currentTimeMillis() - startTimeOfSolutionPool > originalTimeLimit * 1000) {
+                            if (System.currentTimeMillis() - startTimeOfSolutionPool > poolTimeLimit * 1000) {
                                 logger.info("Early termination after {} iterations of filling the solution pool: " +
                                         "Time limit reached.", count);
                                 break;

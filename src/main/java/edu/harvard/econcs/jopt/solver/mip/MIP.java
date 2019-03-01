@@ -495,13 +495,12 @@ public class MIP implements IMIP, Serializable, Cloneable {
     }
 
     /**
-     * Resets CPLEX/JOpt parameters to: Wall clock, 10 minute timelimit, strict
+     * Resets CPLEX/JOpt parameters to: Wall clock, strict
      * IIS calculation, no-output problem file, and zero missing proposed
      * variables.
      */
     public void resetDefaultSolveParams() {
         setSolveParam(SolveParam.CLOCK_TYPE, 2); // 1 CPU, 2 wall clock
-        setSolveParam(SolveParam.TIME_LIMIT, 600d);// 10 minutes.
 
         // When we seed values of MIPs, this make all missing int/bool variables
         // == 0.

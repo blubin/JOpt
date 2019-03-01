@@ -307,8 +307,38 @@ public class SolveParam implements Serializable {
 
     /**
      * The same as {@link #SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE}, but for the relative gap.
+     *
+     * Note that these tolerances behave in an "OR" fashion. Thus, if any value is "good enough", the pool population
+     * stops. Usually, the relative gap tolerance is more intuitive (and can be set without knowing the approximate
+     * range of objective values), but as soon as the objective value of the best solution goes towards zero,
+     * the relative gap tolerance is less useful. It is therefore recommended to set an absolute gap tolerance as a
+     * "backup" if the objective value goes towards zero.
+     *
+     * Example:
+     * Assume three minimization problems (A, B, and C), where the objective values of the best solutions are:
+     *      A: 0
+     *      B: 10
+     *      C: 1000.
+     * Further, assume that you have set the relative gap tolerance to 0.1 (10%) and the absolute gap tolerance to 10.
+     *
+     * Case A:
+     *      The absolute gap tolerance defines solutions within [0, 10] as good enough
+     *      The relative gap tolerance does not have any effect (10% of 0 remains 0)
+     * Case B:
+     *      The absolute gap tolerance defines solutions within [10, 20] as good enough
+     *      The relative gap tolerance defines solutions within [10, 11] as good enough
+     *      --> The relative gap tolerance overruled by the absolute gap tolerance
+     * Case C:
+     *      The absolute gap tolerance defines solutions within [1000, 1010] as good enough
+     *      The relative gap tolerance defines solutions within [1000, 1100] as good enough
+     *      --> The absolute gap tolerance is overruled by the relative gap tolerance
      */
     public static final SolveParam SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE = new SolveParam(112, Double.class, "SolutionPoolMode4RelGapTolerance", true);
+
+    /**
+     * Maximum time in Solution Pool Mode 4 to populate the pool after solving for the optimal solution (in seconds)
+     **/
+    public static final SolveParam SOLUTION_POOL_MODE_4_TIME_LIMIT = new SolveParam(113, Double.class, "SolutionPoolMode4TimeLimit", true);
 
     // Other stuff below:
     // //////////////////
@@ -419,6 +449,8 @@ public class SolveParam implements Serializable {
                 return SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE;
             case 112:
                 return SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE;
+            case 113:
+                return SOLUTION_POOL_MODE_4_TIME_LIMIT;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);
