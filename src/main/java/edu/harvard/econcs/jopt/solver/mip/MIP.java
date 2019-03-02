@@ -64,6 +64,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
+    private Collection<Variable> variablesOfInterest = null;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -71,6 +72,14 @@ public class MIP implements IMIP, Serializable, Cloneable {
 
     // Variables:
     // //////////
+
+    public boolean containsVar(Variable var) {
+        return vars.containsKey(var.getName());
+    }
+    public boolean containsVar(String name) {
+        return vars.containsKey(name);
+    }
+
 
     public Map<String, Variable> getVars() {
         return Collections.unmodifiableMap(vars);
@@ -110,12 +119,20 @@ public class MIP implements IMIP, Serializable, Cloneable {
         }
     }
 
+    public Collection<Variable> getVariablesOfInterest() {
+        return variablesOfInterest;
+    }
+
+    public void setVariablesOfInterest(Collection<Variable> variablesOfInterest) {
+        this.variablesOfInterest = variablesOfInterest;
+    }
+
     // Proposed Values:
     // ////////////////
 
     private void checkProposedHashMap() {
         if (proposedValuesForVars == null) {
-            proposedValuesForVars = new HashMap<Variable, Object>();
+            proposedValuesForVars = new HashMap<>();
         }
     }
 
@@ -478,13 +495,12 @@ public class MIP implements IMIP, Serializable, Cloneable {
     }
 
     /**
-     * Resets CPLEX/JOpt parameters to: Wall clock, 10 minute timelimit, strict
+     * Resets CPLEX/JOpt parameters to: Wall clock, strict
      * IIS calculation, no-output problem file, and zero missing proposed
      * variables.
      */
     public void resetDefaultSolveParams() {
         setSolveParam(SolveParam.CLOCK_TYPE, 2); // 1 CPU, 2 wall clock
-        setSolveParam(SolveParam.TIME_LIMIT, 600d);// 10 minutes.
 
         // When we seed values of MIPs, this make all missing int/bool variables
         // == 0.
@@ -497,8 +513,6 @@ public class MIP implements IMIP, Serializable, Cloneable {
         setSolveParam(SolveParam.MIN_OBJ_VALUE, -1e75);
 
         setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0);
-
-        setSolveParam(SolveParam.SOLUTION_POOL_INTENSITY, 0);
         setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
 
     }
@@ -548,6 +562,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
             ret.vars.put(name, val.typedClone());
         }
 
+        checkProposedHashMap();
         ret.proposedValuesForVars = new HashMap();
         for (Variable v : proposedValuesForVars.keySet()) {
             Object val = proposedValuesForVars.get(v);

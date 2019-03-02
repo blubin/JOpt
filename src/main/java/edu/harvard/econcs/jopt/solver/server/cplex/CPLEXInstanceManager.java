@@ -49,11 +49,19 @@ public enum CPLEXInstanceManager {
     private static final Logger logger = LogManager.getLogger(CPLEXInstanceManager.class);
 
     private int numSimultaneous = 100;
-    private BlockingQueue<IloCplex> available = new LinkedBlockingQueue<IloCplex>();
+    private BlockingQueue<IloCplex> available = new LinkedBlockingQueue<>();
     private AtomicInteger inUseCount = new AtomicInteger();
 
     public void setNumSimultaneous(int numSimultaneous) {
         this.numSimultaneous = numSimultaneous;
+    }
+
+    public void clear() {
+        for (IloCplex cplex : available) {
+            cplex.end();
+        }
+        inUseCount = new AtomicInteger();
+        available = new LinkedBlockingQueue<>();
     }
 
     public IloCplex checkOutCplex() {
@@ -108,7 +116,14 @@ public enum CPLEXInstanceManager {
         if (cplex == null) {
             return;
         }
+        /*
+         * Some parameters don't seem to be reset by the clear() call (e.g. solution pool absolute gap),
+         * which results in unexpected behavior when solving multiple MIPs in a row.
+         * This seems to be a bug on the CPLEX side, and the workaround is to actively reset the parameter to its
+         * default value.
+         */
         try {
+            cplex.setParam(IloCplex.DoubleParam.SolnPoolAGap, 1.0e+75); // Actively reset to default value
             cplex.getParameterSet().clear();
             cplex.clearCallbacks();
             cplex.clearModel();

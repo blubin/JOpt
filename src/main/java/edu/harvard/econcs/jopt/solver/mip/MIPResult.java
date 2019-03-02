@@ -37,6 +37,7 @@ import java.util.Queue;
 
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
+import edu.harvard.econcs.jopt.solver.ISolution;
 import edu.harvard.econcs.jopt.solver.MIPException;
 
 /**
@@ -52,7 +53,9 @@ public class MIPResult implements IMIPResult {
     private Map<String, Double> values = new HashMap();
     private Map<Constraint, Double> constraintidstoDuals = new HashMap();
     private long solveTime;
-    private Queue<IntermediateSolution> intermediateSolutionList = null;
+    private double relativeGap;
+    private double absoluteGap;
+    private Queue<PoolSolution> poolSolutionList = null;
 
     public MIPResult(double objectiveValue, Map<String,Double> values, Map<Constraint,Double> constraintidsToDuals) {
         this.objectiveValue = objectiveValue;
@@ -107,12 +110,30 @@ public class MIPResult implements IMIPResult {
     }
 
     @Override
-    public Queue<IntermediateSolution> getIntermediateSolutions() {
-        return intermediateSolutionList;
+    public Queue<PoolSolution> getPoolSolutions() {
+        return poolSolutionList;
     }
 
-    public void setIntermediateSolutions(Queue<IntermediateSolution> lst) {
-        this.intermediateSolutionList = lst;
+    @Override
+    public double getRelativeGap() {
+        return relativeGap;
+    }
+
+    public void setRelativeGap(double relativeGap) {
+        this.relativeGap = relativeGap;
+    }
+
+    @Override
+    public double getAbsoluteGap() {
+        return absoluteGap;
+    }
+
+    public void setAbsoluteGap(double absoluteGap) {
+        this.absoluteGap = absoluteGap;
+    }
+
+    public void setPoolSolutions(Queue<PoolSolution> lst) {
+        this.poolSolutionList = lst;
     }
 
     public String toString() {
@@ -143,8 +164,8 @@ public class MIPResult implements IMIPResult {
         sb.append("\nObjective Value: ");
         sb.append(objectiveValue);
         sb.append("\n");
-        if (intermediateSolutionList != null) {
-            sb.append("Number of Intermediate Solutions Available: " + intermediateSolutionList.size());
+        if (poolSolutionList != null) {
+            sb.append("Number of Pool Solutions Available: " + poolSolutionList.size());
         }
         return sb.toString();
     }
@@ -210,8 +231,8 @@ public class MIPResult implements IMIPResult {
             ++id;
         }
 
-        if (intermediateSolutionList != null) {
-            sb.append("Number of Intermediate Solutions Available: " + intermediateSolutionList.size());
+        if (poolSolutionList != null) {
+            sb.append("Number of Pool Solutions Available: " + poolSolutionList.size());
         }
         return sb.toString();
     }
@@ -222,7 +243,7 @@ public class MIPResult implements IMIPResult {
     }
 
     public boolean equal(Object other) {
-        Solution otherSolution = (Solution) other;
+        ISolution otherSolution = (ISolution) other;
         return this.objectiveValue == otherSolution.getObjectiveValue() && getValues().equals(otherSolution.getValues());
     }
 

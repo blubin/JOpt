@@ -28,8 +28,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package edu.harvard.econcs.jopt.solver.mip;
+package edu.harvard.econcs.jopt.solver;
 
+import edu.harvard.econcs.jopt.solver.mip.Variable;
+
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -38,7 +41,7 @@ import java.util.Map;
  * @author Benedikt
  * 
  */
-public interface Solution extends Comparable<Solution> {
+public interface ISolution extends Comparable<ISolution> {
     /** Returns the objective value calculated by the solver */
 
     double getObjectiveValue();
@@ -54,11 +57,24 @@ public interface Solution extends Comparable<Solution> {
     long getSolveTime();
 
     /**
-     * Compares this {@link Solution} to another {@link Solution} based on the
+     * Compares this {@link ISolution} to another {@link ISolution} based on the
      * objective
      */
-    default int compareTo(Solution o) {
+    default int compareTo(ISolution o) {
         return Double.compare(getObjectiveValue(), o.getObjectiveValue());
+    }
+
+    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+        double e = 1e-8;
+        for (Variable var : variablesOfInterest) {
+            double thisValue = this.getValue(var);
+            double otherValue = o.getValue(var);
+            if (thisValue < otherValue - e
+                || thisValue > otherValue + e) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

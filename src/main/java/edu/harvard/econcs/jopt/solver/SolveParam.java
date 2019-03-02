@@ -195,7 +195,7 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam SOLUTION_POOL_INTENSITY = new SolveParam(20, Integer.class, "SolutionPoolIntensity");
     /**
-     * Number of intermediate solutions to capture. 0 turns of populate.
+     * Number of pool solutions to capture. 0 turns off populate.
      * Defaults to 0.
      **/
     public static final SolveParam SOLUTION_POOL_CAPACITY = new SolveParam(21, Integer.class, "SolutionPoolCapacity");
@@ -228,6 +228,11 @@ public class SolveParam implements Serializable {
      * replacement strategy.
      */
     public static final SolveParam SOLUTION_POOL_REPLACEMENT = new SolveParam(23, Integer.class, "SolutionPoolReplacementStrategy");
+
+    /**
+     * Enables data check by CPLEX. 1 = activated, 2 = activated and show debug information in log
+     */
+    public static final SolveParam DATACHECK = new SolveParam(24, Integer.class, "DataCheck");
     // Internal variables
     // ///////////////////
     /**
@@ -263,7 +268,11 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam CALC_DUALS = new SolveParam(106, Boolean.class, "CalcDuals", true);
     /**
-     * 0 (default) is none 1 is callback 2 is solution pool
+     * 0 (default): none
+     * 1: callback (it collects intermediate solutions along the way with no additional effort)
+     * 2: solution pool is constructed by a simple CPLEX populate() call
+     * 3: k-best: iteratively fills pool by re-solving the previous MIP but forbidding the old solution via constraints
+     * 4: k-best: uses CPLEX populate() iteratively while adjusting the parameters to find the k best solutions
      */
     public static final SolveParam SOLUTION_POOL_MODE = new SolveParam(107, Integer.class, "SolPoolMode", true);
     /**
@@ -277,6 +286,59 @@ public class SolveParam implements Serializable {
      * Flag whether the user wants to accept a suboptimal solution after timeout or have an Exception thrown.
      */
     public static final SolveParam ACCEPT_SUBOPTIMAL = new SolveParam(109, Boolean.class, "AcceptSuboptimal", true);
+
+    /**
+     * If Solution Pool Mode 4 is used, this parameter defines the number of solutions that are looked for with
+     * every step of the algorithm (as a multiplier of the requested number of solutions).
+     * Defaults to 2: That means that after the first step of the mode 4 algorithm (and thus after setting
+     * first boundaries for the solutions), CPLEX is looking for twice as many solutions as the requested pool capacity.
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_MULTIPLIER = new SolveParam(110, Double.class, "SolutionPoolMode4Multiplier", true);
+
+    /**
+     * If Solution Pool Mode 4 is used, this parameter defines the user's tolerance for the absolute gap between the
+     * integer optimal solution and the worst solution currently in the pool.
+     * This allows avoiding a long runtime to find the very best k solutions, if a user is
+     * fine "as long as all the solutions in the pool are within a reasonable range of the optimal solution".
+     *
+     * Defaults to 0 (no tolerance, find the best k solutions within my time limit).
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE = new SolveParam(111, Double.class, "SolutionPoolMode4AbsGapTolerance", true);
+
+    /**
+     * The same as {@link #SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE}, but for the relative gap.
+     *
+     * Note that these tolerances behave in an "OR" fashion. Thus, if any value is "good enough", the pool population
+     * stops. Usually, the relative gap tolerance is more intuitive (and can be set without knowing the approximate
+     * range of objective values), but as soon as the objective value of the best solution goes towards zero,
+     * the relative gap tolerance is less useful. It is therefore recommended to set an absolute gap tolerance as a
+     * "backup" if the objective value goes towards zero.
+     *
+     * Example:
+     * Assume three minimization problems (A, B, and C), where the objective values of the best solutions are:
+     *      A: 0
+     *      B: 10
+     *      C: 1000.
+     * Further, assume that you have set the relative gap tolerance to 0.1 (10%) and the absolute gap tolerance to 10.
+     *
+     * Case A:
+     *      The absolute gap tolerance defines solutions within [0, 10] as good enough
+     *      The relative gap tolerance does not have any effect (10% of 0 remains 0)
+     * Case B:
+     *      The absolute gap tolerance defines solutions within [10, 20] as good enough
+     *      The relative gap tolerance defines solutions within [10, 11] as good enough
+     *      --> The relative gap tolerance overruled by the absolute gap tolerance
+     * Case C:
+     *      The absolute gap tolerance defines solutions within [1000, 1010] as good enough
+     *      The relative gap tolerance defines solutions within [1000, 1100] as good enough
+     *      --> The absolute gap tolerance is overruled by the relative gap tolerance
+     */
+    public static final SolveParam SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE = new SolveParam(112, Double.class, "SolutionPoolMode4RelGapTolerance", true);
+
+    /**
+     * Maximum time in Solution Pool Mode 4 to populate the pool after solving for the optimal solution (in seconds)
+     **/
+    public static final SolveParam SOLUTION_POOL_MODE_4_TIME_LIMIT = new SolveParam(113, Double.class, "SolutionPoolMode4TimeLimit", true);
 
     // Other stuff below:
     // //////////////////
@@ -361,6 +423,8 @@ public class SolveParam implements Serializable {
                 return POPULATE_LIMIT;
             case 23:
                 return SOLUTION_POOL_REPLACEMENT;
+            case 24:
+                return DATACHECK;
             case 101:
                 return PROBLEM_FILE;
             case 102:
@@ -379,6 +443,14 @@ public class SolveParam implements Serializable {
                 return RELATIVE_POOL_SOLVE_TIME;
             case 109:
                 return ACCEPT_SUBOPTIMAL;
+            case 110:
+                return SOLUTION_POOL_MODE_4_MULTIPLIER;
+            case 111:
+                return SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE;
+            case 112:
+                return SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE;
+            case 113:
+                return SOLUTION_POOL_MODE_4_TIME_LIMIT;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);
