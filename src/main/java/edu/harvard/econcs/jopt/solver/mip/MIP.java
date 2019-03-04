@@ -64,7 +64,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
-    private Collection<Variable> variablesOfInterest = null;
+    private Collection<Collection<Variable>> variablesOfInterest = null;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -119,11 +119,13 @@ public class MIP implements IMIP, Serializable, Cloneable {
         }
     }
 
-    public Collection<Variable> getVariablesOfInterest() {
+    @Override
+    public Collection<Collection<Variable>> getAdvancedVariablesOfInterest() {
         return variablesOfInterest;
     }
 
-    public void setVariablesOfInterest(Collection<Variable> variablesOfInterest) {
+    @Override
+    public void setAdvancedVariablesOfInterest(Collection<Collection<Variable>> variablesOfInterest) {
         this.variablesOfInterest = variablesOfInterest;
     }
 

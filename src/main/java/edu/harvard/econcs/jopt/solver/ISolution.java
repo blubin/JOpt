@@ -34,6 +34,8 @@ import edu.harvard.econcs.jopt.solver.mip.Variable;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Comparing based on Objective Value
@@ -64,17 +66,45 @@ public interface ISolution extends Comparable<ISolution> {
         return Double.compare(getObjectiveValue(), o.getObjectiveValue());
     }
 
-    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+    /**
+     * To take advantage of the advanced structure of variables of interest, this method checks if for all collections
+     * collections of variables, the sum of these variables are equal.
+     *
+     * @see IMIP#setAdvancedVariablesOfInterest(Collection)
+     *
+     * @param o The other solution
+     * @param variableSetsOfInterest A collection of collections of variables of interest
+     * @return true, if the sum of the values in each collection of variables of interest is equal; else false
+     */
+    default boolean isDuplicateAdvanced(ISolution o, Collection<Collection<Variable>> variableSetsOfInterest) {
+        if (variableSetsOfInterest == null) return false;
         double e = 1e-8;
-        for (Variable var : variablesOfInterest) {
-            double thisValue = this.getValue(var);
-            double otherValue = o.getValue(var);
-            if (thisValue < otherValue - e
-                || thisValue > otherValue + e) {
+        for (Collection<Variable> variableCollection : variableSetsOfInterest) {
+            double thisSum = variableCollection.stream().mapToDouble(this::getValue).sum();
+            double otherSum = variableCollection.stream().mapToDouble(o::getValue).sum();
+            if (thisSum < otherSum - e
+                || thisSum > otherSum + e) {
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Given a collection of variables of interest, this method checks if this solution is a duplicate to another
+     * solution
+     *
+     * @param o The other solution
+     * @param variablesOfInterest A single collection of variables of interest
+     * @return true, if this solution has the same value for all variables of interest; else false
+     */
+    default boolean isDuplicate(ISolution o, Collection<Variable> variablesOfInterest) {
+        if (variablesOfInterest == null) return false;
+        return isDuplicateAdvanced(o,
+                variablesOfInterest
+                        .stream()
+                        .map(v -> Stream.of(v).collect(Collectors.toSet()))
+                        .collect(Collectors.toSet()));
     }
 
 }

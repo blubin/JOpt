@@ -297,10 +297,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.setParam(DoubleParam.TimeLimit, 1e75);
 
                         double solutionPoolMultiplier = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_MULTIPLIER, 2d);
-                        boolean complexProblem = false;
-                        if (mip.getVariablesOfInterest() != null && mip.getVariablesOfInterest().size() < mip.getNumVars()) {
-                            complexProblem = true;
-                        }
                         int finalSolutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
                         cplex.setParam(IntParam.SolnPoolCapacity, 2100000000);
                         cplex.setParam(IntParam.SolnPoolIntensity, 4);
@@ -325,11 +321,9 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                             logger.debug("Start of round {}.", count + 1);
                             printPool(cplex);
-                            if (complexProblem) {
-                                clearDuplicates(mip, vars, cplex);
-                                logger.debug("After clearing duplicates in round {}.", count + 1);
-                                printPool(cplex);
-                            }
+                            clearDuplicates(mip, vars, cplex);
+                            logger.debug("After clearing duplicates in round {}.", count + 1);
+                            printPool(cplex);
                             truncatePool(mip, cplex);
                             logger.debug("After truncating pool in round {}.", count + 1);
                             printPool(cplex);
@@ -382,9 +376,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             }
                             count++;
                         }
-                        if (complexProblem) {
-                            clearDuplicates(mip, vars, cplex);
-                        }
+                        clearDuplicates(mip, vars, cplex);
                         truncatePool(mip, cplex);
                         logger.debug("Pool filled. Made {} refinement(s).", count);
 
@@ -517,6 +509,7 @@ public class CPlexMIPSolver implements IMIPSolver {
     }
 
     private void clearDuplicates(IMIP mip, Map<String, IloNumVar> vars, IloCplex cplex) {
+        if (mip.getAdvancedVariablesOfInterest() == null) return;
         List<Integer> duplicateSolutions = new ArrayList<>();
         try {
             for (int i = 0; i < cplex.getSolnPoolNsolns() - 1; ++i) {
@@ -525,7 +518,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                     for (int j = i + 1; j < cplex.getSolnPoolNsolns(); ++j) {
                         if (!duplicateSolutions.contains(j)) {
                             PoolSolution jSol = extractSolution(cplex, vars, j);
-                            if (iSol.isDuplicate(jSol, mip.getVariablesOfInterest())) {
+                            if (iSol.isDuplicateAdvanced(jSol, mip.getAdvancedVariablesOfInterest())) {
                                 duplicateSolutions.add(j);
                             }
                         }

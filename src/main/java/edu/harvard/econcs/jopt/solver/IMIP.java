@@ -31,10 +31,9 @@
 package edu.harvard.econcs.jopt.solver;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import edu.harvard.econcs.jopt.solver.mip.Constraint;
 import edu.harvard.econcs.jopt.solver.mip.LinearTerm;
@@ -97,14 +96,37 @@ public interface IMIP extends Serializable {
 	 * in combination with SOLUTION_POOL_MODE = 3 or SOLUTION_POOL_MODE = 4. They form the set
 	 * of variables that distinguish different solutions in the context of the MIP. For example, in an auction,
 	 * these variables could be the allocation variables.
-	 * @param variables The variables of interest. Currently, only boolean variables are supported.
+	 *
+	 * @param variables The variables of interest. For SOLUTION_POOL_MODE = 3, only boolean variables are supported.
 	 */
-	void setVariablesOfInterest(Collection<Variable> variables);
+	default void setVariablesOfInterest(Collection<Variable> variables) {
+		setAdvancedVariablesOfInterest(variables
+				.stream()
+				.map(v -> Stream.of(v).collect(Collectors.toSet()))
+				.collect(Collectors.toSet())
+		);
+	}
+
+	/**
+	 * Internally, the variables of interest are stored as a collection of collections, even when the user
+     * sets them as a single collection. A user may, however, set the variables of interest directly in this advanced
+     * structure. This gives, without breaking the API of a simple collection of variables, the user the possibility
+	 * to define sets of variables that all have to be equal in their sum to be considered a duplicate.
+	 *
+	 * @param variableSets The sets of variables of interest. For SOLUTION_POOL_MODE = 3, only boolean variables are
+	 *                     supported.
+	 */
+	void setAdvancedVariablesOfInterest(Collection<Collection<Variable>> variableSets);
 
 	/**
 	 * @return the variables of interest if defined, else null
 	 */
-	Collection<Variable> getVariablesOfInterest();
+	default Collection<Variable> getVariablesOfInterest() {
+		if (getAdvancedVariablesOfInterest() == null) return null;
+		return getAdvancedVariablesOfInterest().stream().flatMap(Collection::stream).collect(Collectors.toSet());
+	}
+
+	Collection<Collection<Variable>> getAdvancedVariablesOfInterest();
 
 	// Proposed Variable Values:
 	////////////////////////////
