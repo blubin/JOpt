@@ -108,8 +108,9 @@ public interface IMIP extends Serializable {
 	}
 
 	/**
-	 * Internally, the variables of interest are stored as a collection of collections.
-	 * This gives, without breaking the API of a simple collection of variables, the user the possibility
+	 * Internally, the variables of interest are stored as a collection of collections, even when the user
+     * sets them as a single collection. A user may, however, set the variables of interest directly in this advanced
+     * structure. This gives, without breaking the API of a simple collection of variables, the user the possibility
 	 * to define sets of variables that all have to be equal in their sum to be considered a duplicate.
 	 *
 	 * @param variableSets The sets of variables of interest. For SOLUTION_POOL_MODE = 3, only boolean variables are
