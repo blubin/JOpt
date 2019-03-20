@@ -291,10 +291,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                         } else if (poolTimeLimit < 0) {
                             poolTimeLimit = 1e75;
                         }
-                        long startTimeOfSolutionPool = System.currentTimeMillis();
-                        double originalTimeLimit = cplex.getParam(DoubleParam.TimeLimit);
-                        // We disable the time limit of the individual runs, because we handle it manually
-                        cplex.setParam(DoubleParam.TimeLimit, 1e75);
 
                         double solutionPoolMultiplier = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_MULTIPLIER, 2d);
                         int finalSolutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
@@ -317,7 +313,24 @@ public class CPlexMIPSolver implements IMIPSolver {
                         int count = 0;
                         double absSolPoolGap = 1e75;
                         double relSolPoolGap = 1e75;
-                        while (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
+                        long startTimeOfSolutionPool = System.currentTimeMillis();
+                        while (IloCplex.CplexStatus.PopulateSolLim.equals(status) || IloCplex.CplexStatus.AbortTimeLim.equals(status)) {
+
+                            if (System.currentTimeMillis() - startTimeOfSolutionPool > poolTimeLimit * 1000) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Time limit reached.", count);
+                                break;
+                            }
+                            if (absoluteSolutionPoolGapTolerance > absSolPoolGap) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Absolute solution pool gap is within tolerance.", count);
+                                break;
+                            }
+                            if (relativeSolutionPoolGapTolerance > relSolPoolGap) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Relative solution pool gap is within tolerance.", count);
+                                break;
+                            }
 
                             logger.debug("Start of round {}.", count + 1);
                             printPool(cplex);
@@ -328,8 +341,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             logger.debug("After truncating pool in round {}.", count + 1);
                             printPool(cplex);
 
-                            // If it's a complex problem and solutionPoolSize < solutionPoolCapacity,
-                            // skip the absGap setting
+                            // If solutionPoolSize < solutionPoolCapacity, skip the absGap setting
                             int solutionsInPool = cplex.getSolnPoolNsolns();
                             if (solutionsInPool >= finalSolutionPoolCapacity) {
                                 /*
@@ -359,21 +371,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                             status = cplex.getCplexStatus();
                             logger.debug("Status: {}", status);
 
-                            if (System.currentTimeMillis() - startTimeOfSolutionPool > poolTimeLimit * 1000) {
-                                logger.info("Early termination after {} iterations of filling the solution pool: " +
-                                        "Time limit reached.", count);
-                                break;
-                            }
-                            if (absoluteSolutionPoolGapTolerance > absSolPoolGap) {
-                                logger.info("Early termination after {} iterations of filling the solution pool: " +
-                                        "Absolute solution pool gap is within tolerance.", count);
-                                break;
-                            }
-                            if (relativeSolutionPoolGapTolerance > relSolPoolGap) {
-                                logger.info("Early termination after {} iterations of filling the solution pool: " +
-                                        "Relative solution pool gap is within tolerance.", count);
-                                break;
-                            }
                             count++;
                         }
                         clearDuplicates(mip, vars, cplex);
@@ -382,7 +379,8 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                         if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
                                 && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
-                            if (IloCplex.CplexStatus.PopulateSolLim.equals(status)) {
+                            if (IloCplex.CplexStatus.PopulateSolLim.equals(status)
+                                    || IloCplex.CplexStatus.AbortTimeLim.equals(status)) {
                                 logger.info("Filling the solution pool terminated early due to the user settings " +
                                         "(time limit or absolute/relative solution pool gap). " +
                                         "Note that this does not guarantee that you have the k best solutions.");
@@ -391,7 +389,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                                         "Maybe something went wrong.", status);
                             }
                         }
-                        cplex.setParam(DoubleParam.TimeLimit, originalTimeLimit);
                     }
                 }
 

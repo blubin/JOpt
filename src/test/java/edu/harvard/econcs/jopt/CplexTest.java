@@ -513,8 +513,9 @@ public class CplexTest {
 
         logger.info("MIP:\n{}", mip);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, 0.01);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 998);
+        mip.setSolveParam(SolveParam.TIME_LIMIT, 0.0001);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, 1.0);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         // Following the log, it's visible that the solution pool population was terminated early because of
