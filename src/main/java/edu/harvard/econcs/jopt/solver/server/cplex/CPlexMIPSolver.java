@@ -431,8 +431,8 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.setParam((IloCplex.DoubleParam) cplexParam, dval);
                     }
                 } else {
-
-                    throw new MIPException("Solve failed with status: " + optStatus + ", no conflict calculation possible");
+                    IloCplex.CplexStatus cplexStatus = cplex.getCplexStatus();
+                    throw new MIPException("Solve failed with status: " + optStatus + " (CplexStatus: " + cplexStatus + "), no conflict calculation possible");
                 }
             }
         }
