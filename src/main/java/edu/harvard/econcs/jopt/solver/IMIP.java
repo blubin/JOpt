@@ -97,6 +97,9 @@ public interface IMIP extends Serializable {
 	 * of variables that distinguish different solutions in the context of the MIP. For example, in an auction,
 	 * these variables could be the allocation variables.
 	 *
+	 * If you're interested in a more advanced structure of variables of interest,
+	 * see {@link #setAdvancedVariablesOfInterest(Collection)}.
+	 *
 	 * @param variables The variables of interest. For SOLUTION_POOL_MODE = 3, only boolean variables are supported.
 	 */
 	default void setVariablesOfInterest(Collection<Variable> variables) {
@@ -109,9 +112,9 @@ public interface IMIP extends Serializable {
 
 	/**
 	 * Internally, the variables of interest are stored as a collection of collections, even when the user
-     * sets them as a single collection. A user may, however, set the variables of interest directly in this advanced
+     * sets them as a single collection. But a user may want to set the variables of interest directly in this advanced
      * structure. This gives, without breaking the API of a simple collection of variables, the user the possibility
-	 * to define sets of variables that all have to be equal in their sum to be considered a duplicate.
+	 * to define <b>sets of variables that all have to be equal in their sum to be considered a duplicate.</b>
 	 *
 	 * @param variableSets The sets of variables of interest. For SOLUTION_POOL_MODE = 3, only boolean variables are
 	 *                     supported.
