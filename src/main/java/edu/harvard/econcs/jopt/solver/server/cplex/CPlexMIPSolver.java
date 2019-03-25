@@ -478,6 +478,7 @@ public class CPlexMIPSolver implements IMIPSolver {
         try {
             int poolSize = cplex.getSolnPoolNsolns();
             int requestedSolutions = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0);
+            logger.debug("Starting to truncate pool from {} to {} solutions.", poolSize, requestedSolutions);
             if (poolSize <= requestedSolutions) {
                 return;
             }
@@ -498,7 +499,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             for (int i : truncatedSolutions) {
                 cplex.delSolnPoolSolns(i, 1);
             }
-
+            logger.debug("Done truncating.");
         } catch (IloException e) {
             throw new MIPException("Couldn't truncate the solution pool.", e);
         }
@@ -509,10 +510,12 @@ public class CPlexMIPSolver implements IMIPSolver {
         if (mip.getAdvancedVariablesOfInterest() == null) return;
         List<Integer> duplicateSolutions = new ArrayList<>();
         try {
-            for (int i = 0; i < cplex.getSolnPoolNsolns() - 1; ++i) {
+            int solutionPoolSize = cplex.getSolnPoolNsolns();
+            logger.debug("Starting to clear duplicates in a pool of size {}.", solutionPoolSize);
+            for (int i = 0; i < solutionPoolSize - 1; ++i) {
                 if (!duplicateSolutions.contains(i)) {
                     PoolSolution iSol = extractSolution(cplex, vars, i);
-                    for (int j = i + 1; j < cplex.getSolnPoolNsolns(); ++j) {
+                    for (int j = i + 1; j < solutionPoolSize; ++j) {
                         if (!duplicateSolutions.contains(j)) {
                             PoolSolution jSol = extractSolution(cplex, vars, j);
                             if (iSol.isDuplicateAdvanced(jSol, mip.getAdvancedVariablesOfInterest())) {
@@ -526,6 +529,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             for (int i : duplicateSolutions) {
                 cplex.delSolnPoolSolns(i, 1);
             }
+            logger.debug("Done clearing duplicates.");
         } catch (IloException e) {
             throw new MIPException("Couldn't delete duplicates from solution pool.");
         }
