@@ -293,9 +293,9 @@ public class CplexTest {
 
     private void testMode4WithIrrelevantVariableAndVariablesOfInterest(int capacity) {
         IMIP mip = TestSuite.provideSimpleExample();
-        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.INT, 0, MIP.MAX_VALUE);
         mip.add(irrelevantVariable);
-        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 4);
         irrelevantConstraint.addTerm(1, irrelevantVariable);
         mip.add(irrelevantConstraint);
 

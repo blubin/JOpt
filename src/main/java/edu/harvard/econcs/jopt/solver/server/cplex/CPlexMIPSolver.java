@@ -302,6 +302,36 @@ public class CPlexMIPSolver implements IMIPSolver {
                         cplex.populate();
                         IloCplex.CplexStatus status = cplex.getCplexStatus();
                         logger.debug("Initial Status: {}", status);
+                        double absSolPoolGap = 1e75;
+                        double relSolPoolGap = 1e75;
+
+                        /*
+                         * We already set an absolute gap here to reduce the effect of a certain bug in CPLEX:
+                         *
+                         * There is a bug in CPLEX when it comes to counting the number of replaced
+                         *    solutions in the pool (solutions that at some point were in the pool
+                         *    but then got replaced by better solutions). This bug shows only when
+                         *    calling populate() repeatedly. The effect of this bug is what you
+                         *    observed in iterations 2-25: we essentially call populate() with a
+                         *    solution limit of 0! Eventually, the wrong counting of replaced solutions
+                         *    yields a negative number and at that point it is as if we called
+                         *    populate() with an infinite limit (this is the last iteration that then
+                         *    finds all the remaining solutions).
+                         *
+                         * This algorithm should generally avoid it, however, there have been cases where it occurred
+                         * if the initial number of solutions is very low (due to many duplicates). By setting the
+                         * absolute gap already here, we at least reduce the amount of solutions CPLEX tries to find in
+                         * the very last round (which otherwise can lead to a incredibly long duplicate elimination).
+                         */
+                        if (cplex.getSolnPoolNsolns() >= finalSolutionPoolCapacity) {
+                            absSolPoolGap = getAbsoluteSolutionPoolGap(cplex);
+                            relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(cplex.getObjValue()));
+                            logger.debug("Setting the initial absolute solution pool gap to {}.", absSolPoolGap);
+                            cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
+                        } else {
+                            logger.info("The initial populate() in solution pool mode 4 call did not provide many" +
+                                    "solutions, which indicates that there aren't many solutions available in general.");
+                        }
 
                         double absoluteSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE, 0);
                         double relativeSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE, 0);
@@ -311,8 +341,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                     "that case, you must rely on the absolute gap tolerance.");
                         }
                         int count = 0;
-                        double absSolPoolGap = 1e75;
-                        double relSolPoolGap = 1e75;
+
                         long startTimeOfSolutionPool = System.currentTimeMillis();
                         while (IloCplex.CplexStatus.PopulateSolLim.equals(status) || IloCplex.CplexStatus.AbortTimeLim.equals(status)) {
 
@@ -342,24 +371,8 @@ public class CPlexMIPSolver implements IMIPSolver {
                             printPool(cplex);
 
                             // If solutionPoolSize < solutionPoolCapacity, skip the absGap setting
-                            int solutionsInPool = cplex.getSolnPoolNsolns();
-                            if (solutionsInPool >= finalSolutionPoolCapacity) {
-                                /*
-                                 * Find the minimal and maximal value in the solution pool.
-                                 * The minimal value is the optimal solution, the maximum value
-                                 * is the worst of the currently k best solutions. We can set the
-                                 * absolute solution pool gap to the difference of the maximum
-                                 * and minimum solution, that will make CPLEX stop prematurely in
-                                 * case it can prove that no better solutions can be found
-                                 */
-                                double min = MIP.MAX_VALUE;
-                                double max = -MIP.MAX_VALUE;
-                                for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
-                                    double obj = cplex.getObjValue(solutionNumber);
-                                    if (obj < min) min = obj;
-                                    if (obj > max) max = obj;
-                                }
-                                absSolPoolGap = max - min + 1e-6;
+                            if (cplex.getSolnPoolNsolns() >= finalSolutionPoolCapacity) {
+                                absSolPoolGap = getAbsoluteSolutionPoolGap(cplex);
                                 relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(cplex.getObjValue()));
                                 logger.debug("Setting the absolute solution pool gap to {} in round {}.", absSolPoolGap, count + 1);
                                 cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
@@ -533,6 +546,26 @@ public class CPlexMIPSolver implements IMIPSolver {
         } catch (IloException e) {
             throw new MIPException("Couldn't delete duplicates from solution pool.");
         }
+    }
+
+
+    private double getAbsoluteSolutionPoolGap(IloCplex cplex) throws IloException {
+        /*
+         * Find the minimal and maximal value in the solution pool.
+         * The minimal value is the optimal solution, the maximum value
+         * is the worst of the currently k best solutions. We can set the
+         * absolute solution pool gap to the difference of the maximum
+         * and minimum solution, that will make CPLEX stop prematurely in
+         * case it can prove that no better solutions can be found
+         */
+        double min = MIP.MAX_VALUE;
+        double max = -MIP.MAX_VALUE;
+        for (int solutionNumber = 0; solutionNumber < cplex.getSolnPoolNsolns(); ++solutionNumber) {
+            double obj = cplex.getObjValue(solutionNumber);
+            if (obj < min) min = obj;
+            if (obj > max) max = obj;
+        }
+        return max - min + 1e-6;
     }
 
     private Queue<PoolSolution> findPoolSolutions(IloCplex cplex, Map<String, IloNumVar> vars, int capacity) throws IloException {
