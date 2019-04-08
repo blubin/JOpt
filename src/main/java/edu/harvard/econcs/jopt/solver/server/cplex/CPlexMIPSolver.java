@@ -295,9 +295,13 @@ public class CPlexMIPSolver implements IMIPSolver {
                         double solutionPoolMultiplier = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_MULTIPLIER, 2d);
                         int finalSolutionPoolCapacity = mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY);
                         cplex.setParam(IntParam.SolnPoolCapacity, 2100000000);
+                        cplex.setParam(IloCplex.Param.MIP.Pool.Capacity, 2100000000);
                         cplex.setParam(IntParam.SolnPoolIntensity, 4);
+                        cplex.setParam(IloCplex.Param.MIP.Pool.Intensity, 4);
                         cplex.setParam(IntParam.SolnPoolReplace, 1);
+                        cplex.setParam(IloCplex.Param.MIP.Pool.Replace, 1);
                         cplex.setParam(IntParam.PopulateLim, finalSolutionPoolCapacity);
+                        cplex.setParam(IloCplex.Param.MIP.Limits.Populate, finalSolutionPoolCapacity);
                         logger.debug("Calling populate()");
                         cplex.populate();
                         IloCplex.CplexStatus status = cplex.getCplexStatus();
@@ -347,9 +351,11 @@ public class CPlexMIPSolver implements IMIPSolver {
                                 relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(cplex.getObjValue()));
                                 logger.debug("Setting the absolute solution pool gap to {} in round {}.", absSolPoolGap, count + 1);
                                 cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
+                                cplex.setParam(IloCplex.Param.MIP.Pool.AbsGap, absSolPoolGap);
                             }
                             int popLim = (int) (solutionPoolMultiplier * finalSolutionPoolCapacity);
                             cplex.setParam(IntParam.PopulateLim, popLim);
+                            cplex.setParam(IloCplex.Param.MIP.Limits.Populate, popLim);
                             logger.debug("Calling populate()");
                             cplex.populate();
                             status = cplex.getCplexStatus();
