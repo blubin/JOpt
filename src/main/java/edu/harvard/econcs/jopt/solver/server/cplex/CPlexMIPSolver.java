@@ -980,6 +980,10 @@ public class CPlexMIPSolver implements IMIPSolver {
             return IloCplex.IntParam.PopulateLim;
         } else if (SolveParam.DATACHECK.equals(solveParam)) {
             return IloCplex.Param.Read.DataCheck;
+        } else if (SolveParam.OPTIMALITY_TARGET.equals(solveParam)) {
+            return IloCplex.Param.OptimalityTarget;
+        } else if (SolveParam.QTOLIN.equals(solveParam)) {
+            return IloCplex.Param.Preprocessing.QToLin;
         }
         throw new MIPException("Invalid solve param: " + solveParam);
     }
