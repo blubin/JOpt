@@ -189,8 +189,11 @@ public class CPlexMIPSolver implements IMIPSolver {
                     }
                     logger.debug("var " + varName + ": " + values.get(varName));
                 }
-                // Handle the pool if requested
-                if (cplex.isMIP() && mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 1) {
+                // Handle the pool if requested. Mode 3 is handled a bit differently and should run even if there is only
+                // one solution requested.
+                if (cplex.isMIP()
+                        && (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0) > 1)
+                            || mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                     // Solution pool mode 2: Just use the regular populate() feature from CPLEX
                     if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
                         long cplexSolveEnd = System.currentTimeMillis();
