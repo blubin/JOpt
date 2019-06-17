@@ -205,42 +205,48 @@ public class CPlexMIPSolver implements IMIPSolver {
                     // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
-                        poolSolutions.add(new PoolSolution(cplex.getObjValue(), values)); // Add optimal solution first
-                        Collection<Variable> variablesOfInterest = mip.getVariablesOfInterest();
-                        if (variablesOfInterest == null || variablesOfInterest.isEmpty()) {
+                        PoolSolution optimal = new PoolSolution(cplex.getObjValue(), values);
+                        poolSolutions.add(optimal); // Add optimal solution first
+                        List<Collection<Variable>> listOfCollections = new ArrayList<>(mip.getAdvancedVariablesOfInterest());
+                        if (listOfCollections.isEmpty()) {
                             throw new MIPException("Please specify a collection of boolean variables "
                                     + "that can be used to distinguish different solutions.");
-                        }
-                        for (Variable var : variablesOfInterest) {
-                            if (var.getType() != VarType.BOOLEAN) {
-                                throw new MIPException("Currently, only boolean variables can be used to distinguish "
-                                        + "different solutions.");
-                            }
-                            if (!mip.containsVar(var)) {
-                                throw new MIPException("MIP does not contain Variable " + var + ".");
-                            }
                         }
                         IMIP copyOfMip = mip.typedClone();
                         // Reset the solution pool such that we can solve sequentially
                         copyOfMip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
-                        Set<Variable> variables1 = variablesOfInterest.stream().filter(v -> {
-                            try {
-                                return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 1;
-                            } catch (IloException e) {
-                                logger.warn(e);
-                                return false;
+                        Set<Variable> zVars = new HashSet<>();
+                        Set<Variable> variables1 = new HashSet<>();
+                        Set<Variable> variables0 = new HashSet<>();
+                        for (int i = 0; i < listOfCollections.size(); i++) {
+                            Constraint zDef = new Constraint(CompareType.EQ, 0);
+                            copyOfMip.add(zDef);
+                            double sum = 0;
+                            for (Variable var : listOfCollections.get(i)) {
+                                if (var.getType() != VarType.BOOLEAN) {
+                                    throw new MIPException("Currently, only boolean variables can be used to distinguish "
+                                            + "different solutions.");
+                                }
+                                if (!mip.containsVar(var)) {
+                                    throw new MIPException("MIP does not contain Variable " + var + ".");
+                                }
+                                sum += optimal.getValue(var);
+                                zDef.addTerm(1, var);
                             }
-                        }).collect(Collectors.toSet());
-                        Set<Variable> variables0 = variablesOfInterest.stream().filter(v -> {
-                            try {
-                                return (int) Math.round(cplex.getValue(vars.get(v.getName()))) == 0;
-                            } catch (IloException e) {
-                                logger.warn(e);
-                                return false;
+                            Variable z = new Variable("z_for_solution_pool_" + i, VarType.BOOLEAN, 0, 1);
+                            copyOfMip.add(z);
+                            zVars.add(z);
+                            zDef.addTerm(-1, z);
+                            if (sum > 1 + 1e8) {
+                                throw new MIPException("Currently, only variable sets that have a maximum of 1 variable set to 1 are supported.");
+                            } else if (sum < 1 + 1e-8 && sum > 1 - 1e-8) {
+                                variables1.add(z);
+                            } else {
+                                variables0.add(z);
                             }
-                        }).collect(Collectors.toSet());
+                        }
 
-                        if (variables1.size() + variables0.size() != variablesOfInterest.size()) {
+                        if (variables1.size() + variables0.size() != listOfCollections.size()) {
                             throw new MIPException("Some variables got lost on the way...");
                         }
 
@@ -264,10 +270,10 @@ public class CPlexMIPSolver implements IMIPSolver {
                             }
                             poolSolutions.add(new PoolSolution(poolSolution.getObjectiveValue(), poolValues));
 
-                            variables1 = variablesOfInterest.stream().filter(v -> poolSolution.getValue(v) <= 1.1 && poolSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
-                            variables0 = variablesOfInterest.stream().filter(v -> poolSolution.getValue(v) <= 0.1 && poolSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
+                            variables1 = zVars.stream().filter(v -> poolSolution.getValue(v) <= 1.1 && poolSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
+                            variables0 = zVars.stream().filter(v -> poolSolution.getValue(v) <= 0.1 && poolSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
 
-                            if (variables1.size() + variables0.size() != variablesOfInterest.size()) {
+                            if (variables1.size() + variables0.size() != listOfCollections.size()) {
                                 throw new MIPException("Some variables got lost on the way...");
                             }
                         }
