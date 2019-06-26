@@ -208,7 +208,8 @@ public class CPlexMIPSolver implements IMIPSolver {
                     // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
-                        PoolSolution optimal = new PoolSolution(cplex.getObjValue(), values);
+                        PoolSolution optimal = new PoolSolution(cplex.getObjValue(), cplex.getBestObjValue(), values);
+                        optimal.setPoolGaps(cplex.getObjValue());
                         poolSolutions.add(optimal); // Add optimal solution first
                         List<Collection<Variable>> listOfCollections = new ArrayList<>(mip.getAdvancedVariablesOfInterest());
                         if (listOfCollections.isEmpty()) {
@@ -271,7 +272,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                             for (String name : vars.keySet()) {
                                 poolValues.put(name, poolSolution.getValue(name));
                             }
-                            poolSolutions.add(new PoolSolution(poolSolution.getObjectiveValue(), poolValues));
+                            PoolSolution sol = new PoolSolution(poolSolution.getObjectiveValue(), cplex.getBestObjValue(), poolValues);
+                            sol.setPoolGaps(optimal.getObjectiveValue());
+                            poolSolutions.add(sol);
 
                             variables1 = zVars.stream().filter(v -> poolSolution.getValue(v) <= 1.1 && poolSolution.getValue(v) >= 0.9).collect(Collectors.toSet());
                             variables0 = zVars.stream().filter(v -> poolSolution.getValue(v) <= 0.1 && poolSolution.getValue(v) >= -0.1).collect(Collectors.toSet());
@@ -931,7 +934,9 @@ public class CPlexMIPSolver implements IMIPSolver {
                 IloNumVar var = vars.get(name);
                 poolValues.put(name, cplex.getValue(var, index));
             }
-            return new PoolSolution(cplex.getObjValue(index), poolValues);
+            PoolSolution sol = new PoolSolution(cplex.getObjValue(index), cplex.getBestObjValue(), poolValues);
+            sol.setPoolGaps(cplex.getObjValue());
+            return sol;
         } catch (IloException e) {
             throw new MIPException("Couldn't extract solution.", e);
         }
@@ -1050,7 +1055,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 }
             }
             try {
-                return new PoolSolution(getIncumbentObjValue(), values);
+                return new PoolSolution(getIncumbentObjValue(), getBestObjValue(), values);
             } catch (IloException e) {
                 throw new MIPException("Couldn't get incumbent objective value.", e);
             }

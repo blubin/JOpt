@@ -41,10 +41,21 @@ public class PoolSolution implements Serializable, ISolution {
     private static final long serialVersionUID = -7265174347585717488L;
     private double objectiveValue;
     private final Map<String, Double> values;
+    private double relativeGap;
+    private double absoluteGap;
+    private double poolRelativeGap = -1;
+    private double poolAbsoluteGap = -1;
 
-    public PoolSolution(double objectiveValue, Map<String, Double> values) {
+    public PoolSolution(double objectiveValue, double bestObjectiveValue, Map<String, Double> values) {
         this.objectiveValue = objectiveValue;
         this.values = values;
+        this.absoluteGap = Math.abs(bestObjectiveValue - objectiveValue);
+        this.relativeGap = this.absoluteGap / (1e-10 + Math.abs(bestObjectiveValue));
+    }
+
+    public void setPoolGaps(double optimalObjectiveValue) {
+        this.poolAbsoluteGap = Math.abs(optimalObjectiveValue - objectiveValue);
+        this.poolRelativeGap = this.poolAbsoluteGap / (1e-10 + Math.abs(optimalObjectiveValue));
     }
 
     /*
@@ -135,10 +146,33 @@ public class PoolSolution implements Serializable, ISolution {
         return this.objectiveValue == otherSolution.getObjectiveValue() && getValues().equals(otherSolution.getValues());
     }
 
+    @Override
+    public double getRelativeGap() {
+        return relativeGap;
+    }
+
+    @Override
+    public double getAbsoluteGap() {
+        return absoluteGap;
+    }
+
 
     @Override
     public long getSolveTime() {
         return 0;
     }
 
+    /**
+     * @return The relative gap compared to the optimal feasible solution, if available. Else -1.
+     */
+    public double getPoolRelativeGap() {
+        return poolRelativeGap;
+    }
+
+    /**
+     * @return The absolute gap compared to the optimal feasible solution, if available. Else -1.
+     */
+    public double getPoolAbsoluteGap() {
+        return poolAbsoluteGap;
+    }
 }
