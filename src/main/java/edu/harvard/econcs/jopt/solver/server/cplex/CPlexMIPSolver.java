@@ -451,6 +451,9 @@ public class CPlexMIPSolver implements IMIPSolver {
         if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) != 3) {
             poolSolutions = solutionListener != null ? solutionListener.solutions : new LinkedList<>();
             poolSolutions.addAll(findPoolSolutions(cplex, vars, mip.getIntSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0)));
+            for (PoolSolution poolSolution : poolSolutions) {
+                poolSolution.setPoolGaps(objValue);
+            }
         }
 
         MIPResult res = new MIPResult(objValue, values, constraintidsToDuals);
@@ -934,9 +937,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                 IloNumVar var = vars.get(name);
                 poolValues.put(name, cplex.getValue(var, index));
             }
-            PoolSolution sol = new PoolSolution(cplex.getObjValue(index), cplex.getBestObjValue(), poolValues);
-            sol.setPoolGaps(cplex.getObjValue());
-            return sol;
+            return new PoolSolution(cplex.getObjValue(index), cplex.getBestObjValue(), poolValues);
         } catch (IloException e) {
             throw new MIPException("Couldn't extract solution.", e);
         }
