@@ -69,7 +69,7 @@ public class CplexTest {
         poolValuesFirst.put("C", 3.0);
         poolValuesFirst.put("IRRELEVANT", 0.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A", 1.0);
@@ -77,7 +77,7 @@ public class CplexTest {
         poolValuesSecond.put("C", 3.0);
         poolValuesSecond.put("IRRELEVANT", 1.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         variablesOfInterest.add(new Variable("A", VarType.INT, 0, MIP.MAX_VALUE));
@@ -93,14 +93,14 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A", 1.0);
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 0.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         variablesOfInterest.add(new Variable("A", VarType.INT, 0, MIP.MAX_VALUE));
@@ -117,7 +117,7 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A1", 0.0);
@@ -125,7 +125,7 @@ public class CplexTest {
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 3.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
         Collection<Variable> setA = Stream
@@ -150,7 +150,7 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10.0, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A1", 1.0);
@@ -158,7 +158,7 @@ public class CplexTest {
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 3.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10.0, poolValuesSecond);
 
         Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
         Collection<Variable> setA = Stream
