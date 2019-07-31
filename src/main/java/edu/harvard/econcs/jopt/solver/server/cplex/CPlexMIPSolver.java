@@ -147,6 +147,9 @@ public class CPlexMIPSolver implements IMIPSolver {
         long startTime = System.currentTimeMillis();
         long solveTime = 0;
         double objValue = 0;
+        double bestObjValue = 0;
+        double relGap = 0;
+        double absGap = 0;
         Map<String, Double> values = new HashMap<>();
         boolean done = false;
         IntermediateSolutionGatherer solutionListener = null;
@@ -189,6 +192,12 @@ public class CPlexMIPSolver implements IMIPSolver {
                     }
                     logger.debug("var " + varName + ": " + values.get(varName));
                 }
+
+                objValue = cplex.getObjValue();
+                logger.debug("obj: " + objValue);
+                bestObjValue = cplex.getBestObjValue();
+                relGap = cplex.getMIPRelativeGap();
+                absGap = Math.abs(bestObjValue - objValue);
                 // Handle the pool if requested. Mode 3 is handled a bit differently and should run even if there is only
                 // one solution requested.
                 if (cplex.isMIP()
@@ -208,8 +217,8 @@ public class CPlexMIPSolver implements IMIPSolver {
                     // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
-                        PoolSolution optimal = new PoolSolution(cplex.getObjValue(), cplex.getBestObjValue(), values);
-                        optimal.setPoolGaps(cplex.getObjValue());
+                        PoolSolution optimal = new PoolSolution(objValue, bestObjValue, values);
+                        optimal.setPoolGaps(objValue);
                         poolSolutions.add(optimal); // Add optimal solution first
                         List<Collection<Variable>> listOfCollections = new ArrayList<>(mip.getAdvancedVariablesOfInterest());
                         if (listOfCollections.isEmpty()) {
@@ -272,7 +281,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             for (String name : vars.keySet()) {
                                 poolValues.put(name, poolSolution.getValue(name));
                             }
-                            PoolSolution sol = new PoolSolution(poolSolution.getObjectiveValue(), cplex.getBestObjValue(), poolValues);
+                            PoolSolution sol = new PoolSolution(poolSolution.getObjectiveValue(), bestObjValue, poolValues);
                             sol.setPoolGaps(optimal.getObjectiveValue());
                             poolSolutions.add(sol);
 
@@ -321,9 +330,9 @@ public class CPlexMIPSolver implements IMIPSolver {
 
                         double absoluteSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_ABSOLUTE_GAP_TOLERANCE, 0);
                         double relativeSolutionPoolGapTolerance = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE, 0);
-                        if (cplex.getObjValue() == 0 && relativeSolutionPoolGapTolerance > 0) {
-                            logger.warn("You have set a relative solution pool gap tolerance, but the best" +
-                                    "solution has an objective value of zero. A relative tolerance will not work in" +
+                        if (objValue == 0 && relativeSolutionPoolGapTolerance > 0) {
+                            logger.warn("You have set a relative solution pool gap tolerance, but the best " +
+                                    "solution has an objective value of zero. A relative tolerance will not work in " +
                                     "that case, you must rely on the absolute gap tolerance.");
                         }
                         int count = 0;
@@ -360,7 +369,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                             // If solutionPoolSize < solutionPoolCapacity, skip the absGap setting
                             if (cplex.getSolnPoolNsolns() >= finalSolutionPoolCapacity) {
                                 absSolPoolGap = getAbsoluteSolutionPoolGap(cplex);
-                                relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(cplex.getObjValue()));
+                                relSolPoolGap = absSolPoolGap / (1e-10 + Math.abs(objValue));
                                 logger.debug("Setting the absolute solution pool gap to {} in round {}.", absSolPoolGap, count + 1);
                                 cplex.setParam(DoubleParam.SolnPoolAGap, absSolPoolGap);
                                 cplex.setParam(IloCplex.Param.MIP.Pool.AbsGap, absSolPoolGap);
@@ -409,8 +418,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                         }
                     }
                 }
-                objValue = cplex.getObjValue();
-                logger.debug("obj: " + objValue);
+
                 IloCplex.Status optStatus = cplex.getStatus();
                 logger.debug("CPlex solution status: " + optStatus);
             } else {
@@ -459,8 +467,8 @@ public class CPlexMIPSolver implements IMIPSolver {
         MIPResult res = new MIPResult(objValue, values, constraintidsToDuals);
         res.setPoolSolutions(poolSolutions);
         res.setSolveTime(solveTime);
-        res.setRelativeGap(cplex.getMIPRelativeGap());
-        res.setAbsoluteGap(Math.abs(cplex.getBestObjValue() - objValue));
+        res.setRelativeGap(relGap);
+        res.setAbsoluteGap(absGap);
         return res;
     }
 
