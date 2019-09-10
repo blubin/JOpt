@@ -69,7 +69,7 @@ public class CplexTest {
         poolValuesFirst.put("C", 3.0);
         poolValuesFirst.put("IRRELEVANT", 0.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A", 1.0);
@@ -77,7 +77,7 @@ public class CplexTest {
         poolValuesSecond.put("C", 3.0);
         poolValuesSecond.put("IRRELEVANT", 1.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         variablesOfInterest.add(new Variable("A", VarType.INT, 0, MIP.MAX_VALUE));
@@ -93,14 +93,14 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A", 1.0);
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 0.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Set<Variable> variablesOfInterest = new HashSet<>();
         variablesOfInterest.add(new Variable("A", VarType.INT, 0, MIP.MAX_VALUE));
@@ -117,7 +117,7 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A1", 0.0);
@@ -125,7 +125,7 @@ public class CplexTest {
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 3.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10, poolValuesSecond);
 
         Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
         Collection<Variable> setA = Stream
@@ -150,7 +150,7 @@ public class CplexTest {
         poolValuesFirst.put("B", 2.0);
         poolValuesFirst.put("C", 3.0);
 
-        ISolution first = new PoolSolution(10.0, poolValuesFirst);
+        ISolution first = new PoolSolution(10.0, 10.0, poolValuesFirst);
 
         Map<String, Double> poolValuesSecond = new HashMap<>();
         poolValuesSecond.put("A1", 1.0);
@@ -158,7 +158,7 @@ public class CplexTest {
         poolValuesSecond.put("B", 2.0);
         poolValuesSecond.put("C", 3.0);
 
-        ISolution second = new PoolSolution(10.0, poolValuesSecond);
+        ISolution second = new PoolSolution(10.0, 10.0, poolValuesSecond);
 
         Collection<Collection<Variable>> variableSetsOfInterest = new HashSet<>();
         Collection<Variable> setA = Stream
@@ -293,9 +293,9 @@ public class CplexTest {
 
     private void testMode4WithIrrelevantVariableAndVariablesOfInterest(int capacity) {
         IMIP mip = TestSuite.provideSimpleExample();
-        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.INT, 0, MIP.MAX_VALUE);
         mip.add(irrelevantVariable);
-        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 4);
         irrelevantConstraint.addTerm(1, irrelevantVariable);
         mip.add(irrelevantConstraint);
 
@@ -513,8 +513,9 @@ public class CplexTest {
 
         logger.info("MIP:\n{}", mip);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 10);
-        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, 0.01);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 998);
+        mip.setSolveParam(SolveParam.TIME_LIMIT, 0.0001);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, 1.0);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         // Following the log, it's visible that the solution pool population was terminated early because of

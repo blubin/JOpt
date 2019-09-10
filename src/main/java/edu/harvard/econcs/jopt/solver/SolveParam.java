@@ -233,6 +233,28 @@ public class SolveParam implements Serializable {
      * Enables data check by CPLEX. 1 = activated, 2 = activated and show debug information in log
      */
     public static final SolveParam DATACHECK = new SolveParam(24, Integer.class, "DataCheck");
+
+    /**
+     * Specifies type of optimality that CPLEX targets (optimal convex or first-order satisfaction) as it searches for a solution
+     * <ul>
+     *     <li>0 (default): Automatic - let CPLEX decide</li>
+     *     <li>1: Searches for a globally optimal solution to a convex model</li>
+     *     <li>2: Searches for a solution that satisfies first-order optimality conditions, but is not necessarily globally optimal</li>
+     *     <li>3: Searches for a globally optimal solution to a non-convex model; changes problem type to MIQP if necessary</li>
+     * </ul>
+     */
+    public static final SolveParam OPTIMALITY_TARGET = new SolveParam(25, Integer.class, "OptimalityTarget");
+
+    /**
+     * Switches on or off linearization of the quadratic terms in the objective function of a quadratic program (QP) or of a mixed integer quadratic program (MIQP) during preprocessing.
+     * <ul>
+     *     <li>-1 (default): Automatic - let CPLEX decide</li>
+     *     <li>0: Off: CPLEX does not linearize quadratic terms in the objective function of QP, MIQP</li>
+     *     <li>1: On: CPLEX linearizes quadratic terms in the objective function of QP, MIQP</li>
+     * </ul>
+     */
+    public static final SolveParam QTOLIN = new SolveParam(26, Integer.class, "QToLin");
+
     // Internal variables
     // ///////////////////
     /**
@@ -425,6 +447,10 @@ public class SolveParam implements Serializable {
                 return SOLUTION_POOL_REPLACEMENT;
             case 24:
                 return DATACHECK;
+            case 25:
+                return OPTIMALITY_TARGET;
+            case 26:
+                return QTOLIN;
             case 101:
                 return PROBLEM_FILE;
             case 102:

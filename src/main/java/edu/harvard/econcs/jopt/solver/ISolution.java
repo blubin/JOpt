@@ -67,6 +67,16 @@ public interface ISolution extends Comparable<ISolution> {
     }
 
     /**
+     * @return the relative difference in the objective value compared to the relaxation of the problem
+     */
+    double getRelativeGap();
+
+    /**
+     * @return the absolute difference in the objective value compared to the relaxation of the problem
+     */
+    double getAbsoluteGap();
+
+    /**
      * To take advantage of the advanced structure of variables of interest, this method checks if for all collections
      * collections of variables, the sum of these variables are equal.
      *

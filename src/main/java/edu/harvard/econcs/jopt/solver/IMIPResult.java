@@ -45,27 +45,12 @@ import edu.harvard.econcs.jopt.solver.mip.PoolSolution;
  **/
 public interface IMIPResult extends Serializable, ISolution {
 	
-	 
-	
-
-	
 	/** Returns the dual of a constraint that was added with IMIP.add(constraint, constraintId) */
 	double getDual(Constraint constraint);
-	
-	
+
 	/** Dump the results out to std out, using the MIP to make it pretty **/
 	String toString(IMIP mip);
 	
 	/** Get the Queue of pool solutions, if available **/
 	Queue<PoolSolution> getPoolSolutions();
-
-	/**
-	 * @return the relative difference in the objective value compared to the relaxation of the problem
-	 */
-	double getRelativeGap();
-
-	/**
-	 * @return the absolute difference in the objective value compared to the relaxation of the problem
-	 */
-	double getAbsoluteGap();
 }
