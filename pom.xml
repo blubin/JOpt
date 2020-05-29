@@ -137,7 +137,7 @@
         <dependency>
             <groupId>cplex</groupId>
             <artifactId>cplex</artifactId>
-            <version>12.9</version>
+            <version>12.10</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
