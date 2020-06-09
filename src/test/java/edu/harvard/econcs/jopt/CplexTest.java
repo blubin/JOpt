@@ -7,9 +7,11 @@ import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.client.SolverClient;
 import edu.harvard.econcs.jopt.solver.ISolution;
 import edu.harvard.econcs.jopt.solver.mip.*;
+import edu.harvard.econcs.jopt.solver.server.cplex.CPLEXInstanceManager;
 import edu.harvard.econcs.jopt.solver.server.cplex.CPlexMIPSolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,6 +32,11 @@ public class CplexTest {
 
     @Rule
     public Timeout globalTimeout = Timeout.seconds(60);
+
+    @Before
+    public void prepareClient() {
+        CPLEXInstanceManager.INSTANCE.clear();
+    }
 
 	@Test
     @Ignore // TODO: Find a more complex example that takes long enough for cplex
@@ -60,6 +67,29 @@ public class CplexTest {
             logger.info("Successfully caught exception for the timeout.");
         }
 	}
+
+    @Test
+    public void testDeterministicTimeLimit() {
+        IMIP mip = TestSuite.provideComplexExample();
+        mip.setSolveParam(SolveParam.DETERMINISTIC_TIME_LIMIT, 1d);
+        SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
+
+        mip.setSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true);
+        try {
+            lpSolveSolverClient.solve(mip);
+        } catch (MIPException e) {
+            fail(e.getMessage());
+        }
+
+        mip.setSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, false);
+        try {
+            lpSolveSolverClient.solve(mip);
+            fail("Should have failed. Was it too fast?");
+        } catch (MIPException e) {
+            // Success - should throw this error
+            logger.info("Successfully caught exception for the timeout.");
+        }
+    }
 
 	@Test
     public void testDuplicateCheckTrue() {
@@ -218,9 +248,9 @@ public class CplexTest {
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, solutionPoolCapacity);
 
-        SolverClient lpSolveSolverClient = new SolverClient(new CPlexMIPSolver());
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
 
-        IMIPResult result = lpSolveSolverClient.solve(mip);
+        IMIPResult result = client.solve(mip);
         ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions);
     }
@@ -516,6 +546,34 @@ public class CplexTest {
         mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 998);
         mip.setSolveParam(SolveParam.TIME_LIMIT, 0.0001);
         mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, 1.0);
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        // Following the log, it's visible that the solution pool population was terminated early because of
+        // the time limit
+        IMIPResult result = client.solve(mip);
+        System.out.println(result);
+    }
+
+    @Test
+    public void testSettingMode4DeterministicTimeLimit() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        Variable irrelevantVariable = new Variable("irrelevantVariable", VarType.BOOLEAN, 0, 1);
+        mip.add(irrelevantVariable);
+        Constraint irrelevantConstraint = new Constraint(CompareType.LEQ, 1);
+        irrelevantConstraint.addTerm(1, irrelevantVariable);
+        mip.add(irrelevantConstraint);
+        Set<Variable> variablesOfInterestMode4 = new HashSet<>();
+        for (int i = 1; i <= 10; i++) {
+            variablesOfInterestMode4.add(mip.getVar("x" + i));
+        }
+        mip.setVariablesOfInterest(variablesOfInterestMode4);
+
+        logger.info("MIP:\n{}", mip);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE, 4);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 998);
+        mip.setSolveParam(SolveParam.DISPLAY_OUTPUT, true);
+        mip.setSolveParam(SolveParam.DETERMINISTIC_TIME_LIMIT, 0.1);
+        mip.setSolveParam(SolveParam.SOLUTION_POOL_MODE_4_DETERMINISTIC_TIME_LIMIT, 0.17);
 
         SolverClient client = new SolverClient(new CPlexMIPSolver());
         // Following the log, it's visible that the solution pool population was terminated early because of
