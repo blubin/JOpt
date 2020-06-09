@@ -255,6 +255,12 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam QTOLIN = new SolveParam(26, Integer.class, "QToLin");
 
+    /**
+     * Sets a time limit expressed in ticks, a unit to measure work done deterministically. [CPLEX]
+     * See https://www.ibm.com/support/knowledgecenter/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/DetTiLim.html
+     */
+    public static final SolveParam DETERMINISTIC_TIME_LIMIT = new SolveParam(27, Integer.class, "DetTimeLimit");
+
     // Internal variables
     // ///////////////////
     /**
@@ -451,6 +457,8 @@ public class SolveParam implements Serializable {
                 return OPTIMALITY_TARGET;
             case 26:
                 return QTOLIN;
+            case 27:
+                return DETERMINISTIC_TIME_LIMIT;
             case 101:
                 return PROBLEM_FILE;
             case 102:

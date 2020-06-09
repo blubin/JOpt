@@ -1007,6 +1007,8 @@ public class CPlexMIPSolver implements IMIPSolver {
             return IloCplex.Param.OptimalityTarget;
         } else if (SolveParam.QTOLIN.equals(solveParam)) {
             return IloCplex.Param.Preprocessing.QToLin;
+        } else if (SolveParam.DETERMINISTIC_TIME_LIMIT.equals(solveParam)) {
+            return IloCplex.Param.DetTimeLimit;
         }
         throw new MIPException("Invalid solve param: " + solveParam);
     }
