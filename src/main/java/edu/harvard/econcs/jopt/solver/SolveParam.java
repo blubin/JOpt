@@ -259,7 +259,7 @@ public class SolveParam implements Serializable {
      * Sets a time limit expressed in ticks, a unit to measure work done deterministically. [CPLEX]
      * See https://www.ibm.com/support/knowledgecenter/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/DetTiLim.html
      */
-    public static final SolveParam DETERMINISTIC_TIME_LIMIT = new SolveParam(27, Integer.class, "DetTimeLimit");
+    public static final SolveParam DETERMINISTIC_TIME_LIMIT = new SolveParam(27, Double.class, "DetTimeLimit");
 
     // Internal variables
     // ///////////////////
