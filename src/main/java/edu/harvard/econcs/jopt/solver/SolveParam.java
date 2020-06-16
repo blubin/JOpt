@@ -519,7 +519,7 @@ public class SolveParam implements Serializable {
     }
 
     public boolean isInternal() {
-        return isInternal == true;
+        return isInternal;
     }
 
     public String getTypeDescription() {
