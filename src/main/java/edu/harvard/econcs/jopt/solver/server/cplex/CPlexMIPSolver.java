@@ -941,12 +941,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                 } catch (IloException e) {
                     throw new MIPException(solveParam + ": " + value + ": " + e.toString());
                 }
-            } else if (solveParam == SolveParam.DISPLAY_OUTPUT) {
-                if ((Boolean) getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
-                    cplex.setOut(System.out);
-                } else {
-                    cplex.setOut(null);
-                }
             }
         }
     }
