@@ -73,8 +73,10 @@ public class CPlexMIPSolver implements IMIPSolver {
 
             setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
 
-            // Log only on info logging level
-            if (!mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) && !logger.isDebugEnabled()) {
+            // Log only if DISPLAY_OUTPUT was set to true or debug logging mode is enabled
+            if (mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) || logger.isDebugEnabled()) {
+                cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 2);
+            } else {
                 cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 0);
             }
 
@@ -926,11 +928,11 @@ public class CPlexMIPSolver implements IMIPSolver {
                 logger.debug("Setting " + solveParam.toString() + " to: " + value.toString());
                 try {
                     if (solveParam.isBoolean()) {
-                        cplex.setParam((BooleanParam) cplexParam, ((Boolean) value).booleanValue());
+                        cplex.setParam((BooleanParam) cplexParam, (Boolean) value);
                     } else if (solveParam.isInteger()) {
-                        cplex.setParam((IloCplex.IntParam) cplexParam, ((Integer) value).intValue());
+                        cplex.setParam((IntParam) cplexParam, (Integer) value);
                     } else if (solveParam.isDouble()) {
-                        cplex.setParam((DoubleParam) cplexParam, ((Double) value).doubleValue());
+                        cplex.setParam((DoubleParam) cplexParam, (Double) value);
                     } else if (solveParam.isString()) {
                         cplex.setParam((StringParam) cplexParam, (String) value);
                     } else {
@@ -939,9 +941,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                 } catch (IloException e) {
                     throw new MIPException(solveParam + ": " + value + ": " + e.toString());
                 }
-
-            } else if (solveParam == SolveParam.DISPLAY_OUTPUT && !(Boolean) getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
-                cplex.setOut(null);
             }
         }
     }
