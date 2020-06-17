@@ -22,7 +22,8 @@ import java.util.Map;
         SolverAccessTest.class,
         Examples.class,
         LPSolveTest.class,
-        CplexTest.class
+        CplexTest.class,
+        SolveParamsTest.class
 })
 public class TestSuite {
 

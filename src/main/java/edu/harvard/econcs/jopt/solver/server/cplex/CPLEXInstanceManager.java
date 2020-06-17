@@ -116,15 +116,8 @@ public enum CPLEXInstanceManager {
         if (cplex == null) {
             return;
         }
-        /*
-         * Some parameters don't seem to be reset by the clear() call (e.g. solution pool absolute gap),
-         * which results in unexpected behavior when solving multiple MIPs in a row.
-         * This seems to be a bug on the CPLEX side, and the workaround is to actively reset the parameter to its
-         * default value.
-         */
         try {
-            cplex.setParam(IloCplex.DoubleParam.SolnPoolAGap, 1.0e+75); // Actively reset to default value
-            cplex.getParameterSet().clear();
+            cplex.setDefaults();
             cplex.clearCallbacks();
             cplex.clearModel();
         } catch (IloException e) {
