@@ -74,10 +74,10 @@ public class CPlexMIPSolver implements IMIPSolver {
             setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
 
             // Log only if DISPLAY_OUTPUT was set to true or debug logging mode is enabled
-            if (mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) || logger.isDebugEnabled()) {
-                cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 2);
+            if (mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false)) {
+                cplex.setOut(System.out);
             } else {
-                cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 0);
+                cplex.setOut(null);
             }
 
             // cplex.setParam(IloCplex.DoubleParam.EpInt,
