@@ -434,7 +434,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             } else {
                 // Solve returned an error.
                 IloCplex.Status optStatus = cplex.getStatus();
-                logger.warn("CPlex solve failed status: " + optStatus);
+                logger.info("CPlex solve failed status: " + optStatus);
                 if (optStatus == IloCplex.Status.Infeasible || optStatus == IloCplex.Status.InfeasibleOrUnbounded) {
                     Object cplexParam = getCplexParam(SolveParam.ABSOLUTE_VAR_BOUND_GAP);
                     double dval = cplex.getParam((IloCplex.DoubleParam) cplexParam) * 10;
