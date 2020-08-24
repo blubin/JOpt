@@ -255,6 +255,12 @@ public class SolveParam implements Serializable {
      */
     public static final SolveParam QTOLIN = new SolveParam(26, Integer.class, "QToLin");
 
+    /**
+     * Sets a time limit expressed in ticks, a unit to measure work done deterministically. [CPLEX]
+     * See https://www.ibm.com/support/knowledgecenter/SSSA5P_12.10.0/ilog.odms.cplex.help/CPLEX/Parameters/topics/DetTiLim.html
+     */
+    public static final SolveParam DETERMINISTIC_TIME_LIMIT = new SolveParam(27, Double.class, "DetTimeLimit");
+
     // Internal variables
     // ///////////////////
     /**
@@ -362,6 +368,12 @@ public class SolveParam implements Serializable {
      **/
     public static final SolveParam SOLUTION_POOL_MODE_4_TIME_LIMIT = new SolveParam(113, Double.class, "SolutionPoolMode4TimeLimit", true);
 
+    /**
+     * Maximum ticks in Solution Pool Mode 4 to populate the pool after solving for the optimal solution (in deterministic ticks)
+     **/
+    public static final SolveParam SOLUTION_POOL_MODE_4_DETERMINISTIC_TIME_LIMIT = new SolveParam(114, Double.class, "SolutionPoolMode4DetTimeLimit", true);
+
+
     // Other stuff below:
     // //////////////////
 
@@ -451,6 +463,8 @@ public class SolveParam implements Serializable {
                 return OPTIMALITY_TARGET;
             case 26:
                 return QTOLIN;
+            case 27:
+                return DETERMINISTIC_TIME_LIMIT;
             case 101:
                 return PROBLEM_FILE;
             case 102:
@@ -477,6 +491,8 @@ public class SolveParam implements Serializable {
                 return SOLUTION_POOL_MODE_4_RELATIVE_GAP_TOLERANCE;
             case 113:
                 return SOLUTION_POOL_MODE_4_TIME_LIMIT;
+            case 114:
+                return SOLUTION_POOL_MODE_4_DETERMINISTIC_TIME_LIMIT;
 
         }
         throw new InvalidObjectException("Unknown enum: " + enumUID);
@@ -503,7 +519,7 @@ public class SolveParam implements Serializable {
     }
 
     public boolean isInternal() {
-        return isInternal == true;
+        return isInternal;
     }
 
     public String getTypeDescription() {

@@ -30,40 +30,20 @@
  */
 package edu.harvard.econcs.jopt.solver.server.cplex;
 
+import edu.harvard.econcs.jopt.solver.*;
+import edu.harvard.econcs.jopt.solver.MIPInfeasibleException.Cause;
 import edu.harvard.econcs.jopt.solver.mip.*;
-import ilog.concert.IloConstraint;
-import ilog.concert.IloException;
-import ilog.concert.IloLQNumExpr;
-import ilog.concert.IloLinearNumExpr;
-import ilog.concert.IloNumExpr;
-import ilog.concert.IloNumVar;
-import ilog.concert.IloNumVarBound;
-import ilog.concert.IloNumVarBoundType;
-import ilog.concert.IloNumVarType;
-import ilog.concert.IloQuadNumExpr;
-import ilog.concert.IloRange;
+import edu.harvard.econcs.jopt.solver.server.SolverServer;
+import ilog.concert.*;
 import ilog.cplex.IloCplex;
-import ilog.cplex.IloCplex.BooleanParam;
-import ilog.cplex.IloCplex.IntParam;
-import ilog.cplex.IloCplex.ConflictStatus;
-import ilog.cplex.IloCplex.DoubleParam;
-import ilog.cplex.IloCplex.StringParam;
+import ilog.cplex.IloCplex.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import edu.harvard.econcs.jopt.solver.IMIP;
-import edu.harvard.econcs.jopt.solver.IMIPResult;
-import edu.harvard.econcs.jopt.solver.IMIPSolver;
-import edu.harvard.econcs.jopt.solver.MIPException;
-import edu.harvard.econcs.jopt.solver.MIPInfeasibleException;
-import edu.harvard.econcs.jopt.solver.MIPInfeasibleException.Cause;
-import edu.harvard.econcs.jopt.solver.SolveParam;
-import edu.harvard.econcs.jopt.solver.server.SolverServer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Solves a MIP structure. Should be the only class using CPlex code directly.
@@ -93,9 +73,11 @@ public class CPlexMIPSolver implements IMIPSolver {
 
             setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
 
-            // Log only on info logging level
-            if (!mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false) && !logger.isDebugEnabled()) {
-                cplex.setParam((IntParam) getCplexParam(SolveParam.MIP_DISPLAY), 0);
+            // Log only if DISPLAY_OUTPUT was set to true or debug logging mode is enabled
+            if (mip.getBooleanSolveParam(SolveParam.DISPLAY_OUTPUT, false)) {
+                cplex.setOut(System.out);
+            } else {
+                cplex.setOut(null);
             }
 
             // cplex.setParam(IloCplex.DoubleParam.EpInt,
@@ -145,6 +127,7 @@ public class CPlexMIPSolver implements IMIPSolver {
 
         logger.info("Starting to solve mip.");
         long startTime = System.currentTimeMillis();
+        double startTicks = cplex.getDetTime();
         long solveTime = 0;
         double objValue = 0;
         double bestObjValue = 0;
@@ -206,14 +189,19 @@ public class CPlexMIPSolver implements IMIPSolver {
                     // Solution pool mode 2: Just use the regular populate() feature from CPLEX
                     if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 2) {
                         long cplexSolveEnd = System.currentTimeMillis();
+                        double cplexSolveEndTicks = cplex.getDetTime();
                         double originalSolveLimit = cplex.getParam(DoubleParam.TimeLimit);
+                        double originalDetSolveLimit = cplex.getParam(DoubleParam.DetTimeLimit);
                         double populateFactor = mip.getDoubleSolveParam(SolveParam.RELATIVE_POOL_SOLVE_TIME, -1);
                         if (populateFactor >= 0) {
-                            double populateSolveTime = populateFactor * (cplexSolveEnd - startTime) / 1000d;
-                            cplex.setParam(DoubleParam.TimeLimit, populateSolveTime);
+                            double populateSolveLimit = populateFactor * (cplexSolveEnd - startTime) / 1000d;
+                            cplex.setParam(DoubleParam.TimeLimit, populateSolveLimit);
+                            double detPopulateSolveLimit = populateFactor * (cplexSolveEndTicks - startTicks);
+                            cplex.setParam(DoubleParam.DetTimeLimit, detPopulateSolveLimit);
                         }
                         cplex.populate();
                         cplex.setParam(DoubleParam.TimeLimit, originalSolveLimit);
+                        cplex.setParam(DoubleParam.DetTimeLimit, originalDetSolveLimit);
                     // Solution pool mode 3: Re-solve the MIP while forbidding previous solutions with constraints
                     } else if (mip.getIntSolveParam(SolveParam.SOLUTION_POOL_MODE, 0) == 3) {
                         poolSolutions = new LinkedList<>();
@@ -301,6 +289,7 @@ public class CPlexMIPSolver implements IMIPSolver {
                                     "of the parameters SOLUTION_POOL_INTENSITY, SOLUTION_POOL_REPLACEMENT, " +
                                     "and POPULATE_LIMIT.");
                         }
+
                         double poolTimeLimit = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_TIME_LIMIT, -1);
                         if (mip.getDoubleSolveParam(SolveParam.TIME_LIMIT, -1) > -1 && poolTimeLimit < 0) {
                             logger.info("You defined a time limit of {}s for this run. " +
@@ -311,6 +300,18 @@ public class CPlexMIPSolver implements IMIPSolver {
                             poolTimeLimit = mip.getDoubleSolveParam(SolveParam.TIME_LIMIT);
                         } else if (poolTimeLimit < 0) {
                             poolTimeLimit = 1e75;
+                        }
+
+                        double detPoolTimeLimit = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_DETERMINISTIC_TIME_LIMIT, -1);
+                        if (mip.getDoubleSolveParam(SolveParam.DETERMINISTIC_TIME_LIMIT, -1) > -1 && detPoolTimeLimit < 0) {
+                            logger.info("You defined a deterministic time limit of {}s for this run. " +
+                                            "To populate the solution pool, the same deterministic time limit is used. " +
+                                            "If you'd like to have a different deterministic time limit for populating the solution pool, " +
+                                            "set the SOLUTION_POOL_MODE_4_DETERMINISTIC_TIME_LIMIT parameter accordingly.",
+                                    mip.getDoubleSolveParam(SolveParam.DETERMINISTIC_TIME_LIMIT));
+                            detPoolTimeLimit = mip.getDoubleSolveParam(SolveParam.DETERMINISTIC_TIME_LIMIT);
+                        } else if (detPoolTimeLimit < 0) {
+                            detPoolTimeLimit = 1e75;
                         }
 
                         double solutionPoolMultiplier = mip.getDoubleSolveParam(SolveParam.SOLUTION_POOL_MODE_4_MULTIPLIER, 2d);
@@ -339,11 +340,19 @@ public class CPlexMIPSolver implements IMIPSolver {
                         double absSolPoolGap = 1e75;
                         double relSolPoolGap = 1e75;
                         long startTimeOfSolutionPool = System.currentTimeMillis();
-                        while (IloCplex.CplexStatus.PopulateSolLim.equals(status) || IloCplex.CplexStatus.AbortTimeLim.equals(status)) {
+                        double startTicksOfSolutionPool = cplex.getDetTime();
+                        while (IloCplex.CplexStatus.PopulateSolLim.equals(status)
+                                || IloCplex.CplexStatus.AbortTimeLim.equals(status)
+                                || CplexStatus.AbortDetTimeLim.equals(status)) {
 
                             if (System.currentTimeMillis() - startTimeOfSolutionPool > poolTimeLimit * 1000) {
                                 logger.info("Early termination after {} iterations of filling the solution pool: " +
                                         "Time limit reached.", count);
+                                break;
+                            }
+                            if (cplex.getDetTime() - startTicksOfSolutionPool > detPoolTimeLimit) {
+                                logger.info("Early termination after {} iterations of filling the solution pool: " +
+                                        "Deterministic time limit reached.", count);
                                 break;
                             }
                             if (absoluteSolutionPoolGapTolerance > absSolPoolGap) {
@@ -388,15 +397,16 @@ public class CPlexMIPSolver implements IMIPSolver {
                         truncatePool(mip, cplex);
                         logger.debug("Pool filled. Made {} refinement(s).", count);
 
-                        if (!IloCplex.CplexStatus.OptimalPopulated.equals(status)
-                                && !IloCplex.CplexStatus.OptimalPopulatedTol.equals(status)) {
+                        if (!CplexStatus.OptimalPopulated.equals(status)
+                                && !CplexStatus.OptimalPopulatedTol.equals(status)) {
                             if (IloCplex.CplexStatus.PopulateSolLim.equals(status)
-                                    || IloCplex.CplexStatus.AbortTimeLim.equals(status)) {
+                                    || CplexStatus.AbortTimeLim.equals(status)
+                                    || CplexStatus.AbortDetTimeLim.equals(status)) {
                                 logger.info("Filling the solution pool terminated early due to the user settings " +
                                         "(time limit or absolute/relative solution pool gap). " +
                                         "Note that this does not guarantee that you have the k best solutions.");
                             } else {
-                                logger.warn("Final status ({}) is not what was expected." +
+                                logger.warn("Final status ({}) is not what was expected. " +
                                         "Maybe something went wrong.", status);
                             }
                         }
@@ -424,7 +434,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             } else {
                 // Solve returned an error.
                 IloCplex.Status optStatus = cplex.getStatus();
-                logger.warn("CPlex solve failed status: " + optStatus);
+                logger.info("CPlex solve failed status: " + optStatus);
                 if (optStatus == IloCplex.Status.Infeasible || optStatus == IloCplex.Status.InfeasibleOrUnbounded) {
                     Object cplexParam = getCplexParam(SolveParam.ABSOLUTE_VAR_BOUND_GAP);
                     double dval = cplex.getParam((IloCplex.DoubleParam) cplexParam) * 10;
@@ -444,7 +454,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             }
         }
 
-        if (cplex.getCplexStatus() == IloCplex.CplexStatus.AbortTimeLim) {
+        if (cplex.getCplexStatus() == IloCplex.CplexStatus.AbortTimeLim || cplex.getCplexStatus() == IloCplex.CplexStatus.AbortDetTimeLim) {
             if (mip.getBooleanSolveParam(SolveParam.ACCEPT_SUBOPTIMAL, true)) {
                 logger.warn("Suboptimal solution! Continuing... To reject suboptimal solutions," +
                         "set SolveParam.ACCEPT_SUBOPTIMAL to false.");
@@ -918,11 +928,11 @@ public class CPlexMIPSolver implements IMIPSolver {
                 logger.debug("Setting " + solveParam.toString() + " to: " + value.toString());
                 try {
                     if (solveParam.isBoolean()) {
-                        cplex.setParam((BooleanParam) cplexParam, ((Boolean) value).booleanValue());
+                        cplex.setParam((BooleanParam) cplexParam, (Boolean) value);
                     } else if (solveParam.isInteger()) {
-                        cplex.setParam((IloCplex.IntParam) cplexParam, ((Integer) value).intValue());
+                        cplex.setParam((IntParam) cplexParam, (Integer) value);
                     } else if (solveParam.isDouble()) {
-                        cplex.setParam((DoubleParam) cplexParam, ((Double) value).doubleValue());
+                        cplex.setParam((DoubleParam) cplexParam, (Double) value);
                     } else if (solveParam.isString()) {
                         cplex.setParam((StringParam) cplexParam, (String) value);
                     } else {
@@ -931,9 +941,6 @@ public class CPlexMIPSolver implements IMIPSolver {
                 } catch (IloException e) {
                     throw new MIPException(solveParam + ": " + value + ": " + e.toString());
                 }
-
-            } else if (solveParam == SolveParam.DISPLAY_OUTPUT && !(Boolean) getValue.apply(SolveParam.DISPLAY_OUTPUT)) {
-                cplex.setOut(null);
             }
         }
     }
@@ -1007,6 +1014,8 @@ public class CPlexMIPSolver implements IMIPSolver {
             return IloCplex.Param.OptimalityTarget;
         } else if (SolveParam.QTOLIN.equals(solveParam)) {
             return IloCplex.Param.Preprocessing.QToLin;
+        } else if (SolveParam.DETERMINISTIC_TIME_LIMIT.equals(solveParam)) {
+            return IloCplex.Param.DetTimeLimit;
         }
         throw new MIPException("Invalid solve param: " + solveParam);
     }

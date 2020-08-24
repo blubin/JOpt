@@ -475,17 +475,32 @@ public class MIP implements IMIP, Serializable, Cloneable {
         return getStringSolveParam(param, null);
     }
 
+    /**
+     * This method tries to parse the given value into the right class properly, before setting it "blindly" as it was
+     * doing before. If it's not at all assignable, it will throw an error.
+     *
+     * E.g., it is now possible to call setSolveParam(SolveParam.TIME_LIMIT, 1000), and it would accept this.
+     * In previous versions, a non-matching type (like the integer here instead of the double) would have been ignored.
+     *
+     * @param param The solve parameter that should be set
+     * @param value The value for the solve parameter
+     */
     public void setSolveParam(SolveParam param, Object value) {
-        if (param.getType().isAssignableFrom(value.getClass())) {
-            solveParams.put(param, value);
+        if (param.isString()) {
+            solveParams.put(param, String.valueOf(value));
+        } else if (param.isDouble()) {
+            solveParams.put(param, Double.valueOf(String.valueOf(value)));
+        } else if (param.isBoolean()) {
+            solveParams.put(param, Boolean.valueOf(String.valueOf(value)));
+        } else if (param.isInteger()) {
+            solveParams.put(param, Integer.valueOf(String.valueOf(value)));
+        } else {
+            if (param.getType().isAssignableFrom(value.getClass())) {
+                solveParams.put(param, value);
+            } else {
+                throw new MIPException("Parameter " + param + " is a " + param.getTypeDescription() + ", not " + value.getClass());
+            }
         }
-    }
-
-    public void setSolveParam(SolveParam param, String value) {
-        if (!param.isString()) {
-            throw new MIPException("Parameter " + param + " is a " + param.getTypeDescription() + ", not String");
-        }
-        solveParams.put(param, value);
     }
 
     public Set<SolveParam> getSpecifiedSolveParams() {
@@ -516,6 +531,8 @@ public class MIP implements IMIP, Serializable, Cloneable {
 
         setSolveParam(SolveParam.SOLUTION_POOL_CAPACITY, 0);
         setSolveParam(SolveParam.SOLUTION_POOL_MODE, 0);
+
+        setSolveParam(SolveParam.PARALLEL_MODE, 1);
 
     }
 
