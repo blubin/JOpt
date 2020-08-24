@@ -592,9 +592,8 @@ public class CPlexMIPSolver implements IMIPSolver {
     }
 
     public void exportToDisk(IMIP mip, Path path) {
+        IloCplex cplex = CPLEXInstanceManager.INSTANCE.checkOutCplex();
         try {
-            IloCplex cplex = CPLEXInstanceManager.INSTANCE.checkOutCplex();
-
             setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
             Map<String, IloNumVar> vars = setupVariables(mip, cplex);
             setupConstraints(mip, cplex, vars);
@@ -603,6 +602,8 @@ public class CPlexMIPSolver implements IMIPSolver {
             cplex.exportModel(path.toString());
         } catch (Exception ex) {
             logger.error("Failed to write cplex model to disk", ex);
+        } finally {
+            CPLEXInstanceManager.INSTANCE.checkInCplex(cplex);
         }
 
     }
