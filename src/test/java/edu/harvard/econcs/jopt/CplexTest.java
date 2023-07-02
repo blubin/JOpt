@@ -1,5 +1,7 @@
 package edu.harvard.econcs.jopt;
 
+import edu.harvard.econcs.jopt.solver.ILazyConstraintCallback;
+import edu.harvard.econcs.jopt.solver.ILazyConstraintCallbackContext;
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
 import edu.harvard.econcs.jopt.solver.MIPException;
@@ -254,6 +256,27 @@ public class CplexTest {
         ArrayList<ISolution> solutions = new ArrayList<>(result.getPoolSolutions());
         assertNonEqualSolutions(solutions);
     }
+    
+    @Test
+    public void testSimpleExampleLazyConstraintCallback() {
+        IMIP mip = TestSuite.provideSimpleExample();
+        mip.setLazyConstraintCallback(new ILazyConstraintCallback() {
+			
+			@Override
+			public void callback(ILazyConstraintCallbackContext context) {
+				if(context.getValue("x1") < 0.5) {
+					Constraint c = new Constraint(CompareType.GEQ, 0.5);
+					c.addTerm(1, mip.getVar("x1"));
+					context.addLazyConstraint(c);
+				}
+			}
+		});
+
+        SolverClient client = new SolverClient(new CPlexMIPSolver());
+        IMIPResult result = client.solve(mip);
+        assertEquals(128, result.getObjectiveValue(),0.1);
+    }
+
 
     @Test
     public void testSimpleExampleMode3() {

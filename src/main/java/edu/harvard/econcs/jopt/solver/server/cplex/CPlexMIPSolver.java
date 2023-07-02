@@ -92,6 +92,10 @@ public class CPlexMIPSolver implements IMIPSolver {
             Map<Constraint, IloRange> constraintsToIloConstraints = setupConstraints(mip, cplex, vars);
 
             setUpObjective(mip, cplex, vars);
+            
+            if(mip.getLazyConstraintCallback() != null) {
+            	cplex.use(new CPLEXLazyConstraintCallbackContext(cplex, mip, vars));
+            }
 
             logger.debug("Converting mip done. Took: " + (System.currentTimeMillis() - convertStartTime) + " ms");
 
