@@ -60,6 +60,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private Map<String, Variable> vars = new HashMap();
     private Map<Variable, Object> proposedValuesForVars = null;
     private List<Constraint> constraints = Collections.synchronizedList(new LinkedList<>());
+    private List<Constraint> userCuts = Collections.synchronizedList(new LinkedList<>());
     private Collection<LinearTerm> linearObjectiveTerms = null;
     private Collection<QuadraticTerm> quadraticObjectiveTerms = null;
     private boolean isMax;
@@ -379,6 +380,17 @@ public class MIP implements IMIP, Serializable, Cloneable {
     public void add(Constraint constraint) {
         constraints.add(constraint);
     }
+    
+    // User Cuts:
+    // ////////////
+
+    public List<Constraint> getUserCuts() {
+        return userCuts;
+    }
+
+    public void addUserCut(Constraint constraint) {
+        userCuts.add(constraint);
+    }
 
     // Solve Parameters:
     // /////////////////
@@ -560,6 +572,11 @@ public class MIP implements IMIP, Serializable, Cloneable {
         for (Constraint constraint : constraints) {
             ret.constraints.add(constraint.typedClone());
         }
+        
+        ret.userCuts = new LinkedList<Constraint>();
+        for (Constraint constraint : userCuts) {
+            ret.userCuts.add(constraint.typedClone());
+        }
 
         if (linearObjectiveTerms != null) {
             ret.linearObjectiveTerms = new ArrayList();
@@ -649,6 +666,16 @@ public class MIP implements IMIP, Serializable, Cloneable {
     @Override
     public boolean remove(Constraint constraint) {
         return constraints.remove(constraint);
+    }
+    
+    @Override
+    public int getNumUserCuts() {
+        return userCuts.size();
+    }
+
+    @Override
+    public boolean removeUserCut(Constraint constraint) {
+        return userCuts.remove(constraint);
     }
 
 }

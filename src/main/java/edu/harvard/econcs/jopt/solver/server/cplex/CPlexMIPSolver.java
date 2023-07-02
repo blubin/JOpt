@@ -90,6 +90,7 @@ public class CPlexMIPSolver implements IMIPSolver {
 
             Map<String, IloNumVar> vars = setupVariables(mip, cplex);
             Map<Constraint, IloRange> constraintsToIloConstraints = setupConstraints(mip, cplex, vars);
+            setupUserCuts(mip, cplex, vars);
 
             setUpObjective(mip, cplex, vars);
 
@@ -597,6 +598,7 @@ public class CPlexMIPSolver implements IMIPSolver {
             setControlParams(cplex, mip.getSpecifiedSolveParams(), mip::getSolveParam);
             Map<String, IloNumVar> vars = setupVariables(mip, cplex);
             setupConstraints(mip, cplex, vars);
+            setupUserCuts(mip, cplex, vars);
 
             setUpObjective(mip, cplex, vars);
             cplex.exportModel(path.toString());
@@ -857,6 +859,63 @@ public class CPlexMIPSolver implements IMIPSolver {
         cplex.add(constraints);
         return constraintidsToConstraints;
     }
+    
+    private Map<Constraint, IloRange> setupUserCuts(IMIP mip, IloCplex cplex, Map<String, IloNumVar> vars) throws IloException {
+        // Setup User Cuts:
+        // ///////////////////
+        Map<Constraint, IloRange> constraintidsToConstraints = new HashMap<>();
+        for (Constraint constraint : mip.getUserCuts()) {
+        	
+        	if(constraint.hasQuadraticTerms()) {
+        		throw new MIPException("Cplex does not support quadratic terms in user cuts. Constraint: " + constraint.toString());
+        	}
+
+            logger.debug("Adding user cut: " + constraint);
+
+            // Add Linear Terms:
+            int linearTermsUsed = 0;
+            IloLinearNumExpr numExpr = cplex.linearNumExpr();
+            for (LinearTerm term : constraint.getLinearTerms()) {
+                Variable var = mip.getVar(term.getVarName());
+                if (var == null) {
+                    throw new MIPException("Invalid variable name in term: " + term);
+                }
+                if (var.ignore()) {
+                    logger.debug("Skipping term: " + term);
+                    continue;
+                }
+                linearTermsUsed++;
+                numExpr.addTerm(term.getCoefficient(), vars.get(term.getVarName()));
+            }
+
+            // skip if the constraint contains no terms
+            if (linearTermsUsed == 0) {
+                logger.debug("Skipping constraint" + constraint);
+                continue;
+            }
+
+            // Use the name description for the name, if available.
+            String name = constraint.getDescription();
+
+            // Add to the MIP, including the comparison and constant:
+            CompareType type = constraint.getType();
+            IloRange iloRange = null;
+            if (CompareType.EQ.equals(type)) {
+                iloRange = cplex.eq(numExpr, constraint.getConstant(), name);
+            } else if (CompareType.LEQ.equals(type)) {
+                iloRange = cplex.le(numExpr, constraint.getConstant(), name);
+            } else if (CompareType.GEQ.equals(type)) {
+                iloRange = cplex.ge(numExpr, constraint.getConstant(), name);
+            } else {
+                throw new MIPException("Invalid constraint type: " + type);
+            }
+            constraintidsToConstraints.put(constraint, iloRange);
+        }
+        IloRange[] constraints = constraintidsToConstraints.values().toArray(new IloRange[constraintidsToConstraints.size()]);
+        cplex.addUserCuts(constraints);
+        return constraintidsToConstraints;
+    }
+
 
     private MIPException createInfesibilityException(IloCplex cplex, Map<String, IloNumVar> vars, Map<Constraint, IloRange> constraintsToIloConstraints, IMIP mip) {
         if (!mip.getBooleanSolveParam(SolveParam.CALCULATE_CONFLICT_SET, true)) {

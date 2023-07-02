@@ -286,6 +286,39 @@ public interface IMIP extends Serializable {
      */
 	boolean remove(Constraint constraint);
 	
+	// User Cuts
+	//////////////
+		
+	/**
+	 * @return An iterator over the user cuts
+	 */
+	List<Constraint> getUserCuts();
+		
+	/**
+	 * 
+	 * @return the number of user cuts in the system
+	 */
+	int getNumUserCuts();
+		
+	/**
+	 * Adds a new user cuts. User cuts are those cuts that a user defines based on
+	 * information already implied about the problem by the constraints; user cuts
+	 * may not be strictly necessary to the problem, but they tighten the model.
+	 * 
+	 * Note that user cuts in cplex may only contain linear terms.
+	 * 
+	 * @param constraint the user cut to add
+	 */
+	void addUserCut(Constraint constraint);
+
+
+	/**
+	  * removes a user cut from the formulation.
+	  * @param constraint the user cut to remove
+	  * @return 
+	  */
+	boolean removeUserCut(Constraint constraint);
+	
 	// Solve Parameters:
 	////////////////////
 	
