@@ -798,6 +798,24 @@ public class CPlexMIPSolver implements IMIPSolver {
                 linearTermsUsed++;
                 linearExpr.addTerm(term.getCoefficient(), vars.get(term.getVarName()));
             }
+            
+            // Add Abs Terms
+            int absTermsUsed = 0;
+            IloNumExpr absExpr = cplex.numExpr();
+            for (AbsTerm term : constraint.getAbsTerms()) {
+                Variable var = mip.getVar(term.getVarName());
+                if (var == null) {
+                    throw new MIPException("Invalid variable name in term: " + term);
+                }
+                if (var.ignore()) {
+                    logger.debug("Skipping term: " + term);
+                    continue;
+                }
+                absTermsUsed++;
+                IloLinearNumExpr exp = cplex.linearNumExpr();
+                exp.addTerm(term.getCoefficient(), vars.get(term.getVarName()));
+                absExpr = cplex.sum(absExpr, cplex.abs(exp));
+            }
 
             // Add Quadratic Terms:
             int quadraticTermsUsed = 0;
@@ -819,20 +837,28 @@ public class CPlexMIPSolver implements IMIPSolver {
                 quadExpr.addTerm(term.getCoefficient(), vars.get(term.getVarNameA()), vars.get(term.getVarNameB()));
             }
 
-            // Now make a single constraint from the above two if needed:
+         // Now make a single constraint from the above two if needed:
             IloNumExpr numExpr = null;
-            if (linearTermsUsed == 0 && quadraticTermsUsed == 0) {
+            if (linearTermsUsed == 0 && absTermsUsed == 0 && quadraticTermsUsed == 0) {
                 logger.debug("Skipping constraint" + constraint);
                 continue;
-            } else if (quadraticTermsUsed == 0) {
+            } else if (absTermsUsed == 0 && quadraticTermsUsed == 0) {
                 numExpr = linearExpr;
-            } else if (linearTermsUsed == 0) {
+            } else if (linearTermsUsed == 0 && absTermsUsed == 0) {
                 numExpr = quadExpr;
-            } else {
-                IloLQNumExpr lqexpr = cplex.lqNumExpr();
+            } else if (absTermsUsed == 0){
+            	IloLQNumExpr lqexpr = cplex.lqNumExpr();
                 lqexpr.add(linearExpr);
                 lqexpr.add(quadExpr);
                 numExpr = lqexpr;
+        	} else {
+        		numExpr = cplex.numExpr();
+                if(linearTermsUsed > 0) 
+                	numExpr = cplex.sum(numExpr, linearExpr);
+                if(absTermsUsed > 0)
+                	numExpr = cplex.sum(numExpr, absExpr);
+                if(quadraticTermsUsed > 0)
+                	numExpr = cplex.sum(numExpr, quadExpr);
             }
 
             // Use the name description for the name, if available.

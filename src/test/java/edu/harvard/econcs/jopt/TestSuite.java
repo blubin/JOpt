@@ -3,6 +3,7 @@ package edu.harvard.econcs.jopt;
 import edu.harvard.econcs.jopt.example.ComplexExample;
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.IMIPResult;
+import edu.harvard.econcs.jopt.solver.SolveParam;
 import edu.harvard.econcs.jopt.solver.mip.*;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -164,6 +165,25 @@ public class TestSuite {
         c1.addTerm(512, x9);
         c1.addTerm(64, x10);
 
+        return mip;
+    }
+    
+    
+    public static IMIP provideQuadraticAbsExample() {
+        MIP mip = new MIP();
+        mip.setSolveParam(SolveParam.OPTIMALITY_TARGET, 3);
+        Variable v = new Variable("a", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);  
+        mip.add(v);
+     
+        Constraint c1 = new Constraint(CompareType.LEQ, 4);
+        c1.addTerm(new QuadraticTerm(1, v, v));
+        //c1.addTerm(new LinearTerm(1, v));
+        //c1.addTerm(new AbsTerm(1, v));
+        mip.add(c1);
+        
+        mip.setObjectiveMax(false);
+        mip.addObjectiveTerm(1, v, v);
+        mip.addObjectiveTerm(30, v);
         return mip;
     }
 

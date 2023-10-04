@@ -50,6 +50,7 @@ public class Constraint implements Serializable, Cloneable {
 
 	private Collection<LinearTerm> linearTerms = null;
 	private Collection<QuadraticTerm> quadraticTerms = null;
+	private Collection<AbsTerm> absTerms = null;
 	
 	private double constant;
 	private CompareType type;
@@ -152,6 +153,46 @@ public class Constraint implements Serializable, Cloneable {
 			}});
 		return Arrays.asList(sorted);
 	}	
+	
+	// ABs Terms:
+	
+	public boolean hasABsTerms() {
+		return absTerms != null;
+	}
+
+	public void addTerm(AbsTerm term) {
+		if(absTerms == null) {
+			absTerms = new ArrayList<AbsTerm>();
+		}
+		absTerms.add(term);
+		hashCode=null;
+	}
+		
+	public int absSize() {
+		if (absTerms == null) {
+			return 0;
+		}
+		return absTerms.size();
+	}
+
+	public Collection<AbsTerm> getAbsTerms() {
+		if(absTerms == null) {
+			return Collections.EMPTY_LIST;
+		}
+		return absTerms;
+	}
+		
+	public Collection<AbsTerm> getSortedAbsTerms() {
+		if(absTerms == null) {
+			return Collections.EMPTY_LIST;
+		}
+		AbsTerm[] sorted = absTerms.toArray(new AbsTerm[absTerms.size()]);
+		Arrays.sort(sorted, new Comparator<AbsTerm>(){
+			public int compare(AbsTerm o1, AbsTerm o2) {
+				return o1.getVarName().compareTo(o2.getVarName());
+			}});
+		return Arrays.asList(sorted);
+	}	
 
 	// Quadratic Terms:
 	
@@ -209,6 +250,7 @@ public class Constraint implements Serializable, Cloneable {
 		ArrayList ret = new ArrayList<Term>();
 		ret.addAll(linearTerms);
 		ret.addAll(quadraticTerms);
+		ret.addAll(absTerms);
 		return ret;
 	}
 	
@@ -232,6 +274,8 @@ public class Constraint implements Serializable, Cloneable {
 				+ ((linearTerms == null) ? 0 : linearTerms.hashCode());
 		result = prime * result
 				+ ((quadraticTerms == null) ? 0 : quadraticTerms.hashCode());
+		result = prime * result
+				+ ((absTerms == null) ? 0 : absTerms.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		this.hashCode=result;
 		return result;
@@ -261,6 +305,11 @@ public class Constraint implements Serializable, Cloneable {
 				return false;
 		} else if (!quadraticTerms.equals(other.quadraticTerms))
 			return false;
+		if (absTerms == null) {
+			if (other.absTerms != null)
+				return false;
+		} else if (!absTerms.equals(other.absTerms))
+			return false;
 		if (type == null) {
 			if (other.type != null)
 				return false;
@@ -281,6 +330,12 @@ public class Constraint implements Serializable, Cloneable {
 			ret.quadraticTerms = new ArrayList();
 			for (QuadraticTerm term : getQuadraticTerms()) {
 				ret.quadraticTerms.add(term.typedClone());
+			}
+		}
+		if(absTerms != null) {		
+			ret.absTerms = new ArrayList();
+			for (AbsTerm term : getAbsTerms()) {
+				ret.absTerms.add(term.typedClone());
 			}
 		}
 		return ret;
@@ -313,6 +368,19 @@ public class Constraint implements Serializable, Cloneable {
 				sb.append(" - ");
 			}
 			sb.append(Math.abs(t.getCoefficient())).append(" ").append(t.getVarName());
+			first = false;
+		}
+		
+		for (AbsTerm t : getSortedAbsTerms()) {
+			if (t.getCoefficient() >= 0) {
+				if (!first) {
+					sb.append(" + |");
+				}
+			} else {
+				sb.append(" - |");
+			}
+			sb.append(Math.abs(t.getCoefficient())).append(" ").append(t.getVarName());
+			sb.append("|");
 			first = false;
 		}
 

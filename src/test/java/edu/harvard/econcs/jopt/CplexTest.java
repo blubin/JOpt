@@ -581,6 +581,15 @@ public class CplexTest {
         IMIPResult result = client.solve(mip);
         System.out.println(result);
     }
+    
+    @Test
+    public void testQuadaticAbsExample() {
+    	IMIP mip = TestSuite.provideQuadraticAbsExample();
+    	SolverClient client = new SolverClient(new CPlexMIPSolver());
+        IMIPResult result = client.solve(mip);
+        assertEquals(0, result.getValue("a"), 1e-8);
+        assertEquals(-2, result.getObjectiveValue(), 1e-8);
+    }
 
     private void assertNonEqualSolutions(ArrayList<ISolution> solutions, Collection<Variable> variablesOfInterest) {
         for (int i = 0; i < solutions.size(); i++) {

@@ -314,6 +314,9 @@ public class LPSolveMIPSolver implements IMIPSolver {
         if (!c.getQuadraticTerms().isEmpty()) {
             throw new MIPException("Constraint has quadratic terms, not supported by LPSolve. " + c);
         }
+        if (!c.getAbsTerms().isEmpty()) {
+        	throw new MIPException("Contraint has absolute terms, not supported by LPSolve. " + c);
+        }
         List<LinearTerm> ret = new ArrayList<>();
         Map<Variable, LinearTerm> varToTerm = new HashMap<>();
         for (LinearTerm t : c.getLinearTerms()) {
