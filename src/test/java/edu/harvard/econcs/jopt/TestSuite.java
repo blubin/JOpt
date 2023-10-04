@@ -168,22 +168,19 @@ public class TestSuite {
         return mip;
     }
     
-    
-    public static IMIP provideQuadraticAbsExample() {
+    public static IMIP provideAbsExample() {
         MIP mip = new MIP();
         mip.setSolveParam(SolveParam.OPTIMALITY_TARGET, 3);
         Variable v = new Variable("a", VarType.DOUBLE, -MIP.MAX_VALUE, MIP.MAX_VALUE);  
         mip.add(v);
      
-        Constraint c1 = new Constraint(CompareType.LEQ, 4);
-        c1.addTerm(new QuadraticTerm(1, v, v));
-        //c1.addTerm(new LinearTerm(1, v));
-        //c1.addTerm(new AbsTerm(1, v));
+        Constraint c1 = new Constraint(CompareType.LEQ, 6);
+        c1.addTerm(new LinearTerm(-1, v));
+        c1.addTerm(new AbsTerm(1, v));
         mip.add(c1);
         
         mip.setObjectiveMax(false);
-        mip.addObjectiveTerm(1, v, v);
-        mip.addObjectiveTerm(30, v);
+        mip.addObjectiveTerm(1, v);
         return mip;
     }
 
