@@ -583,7 +583,7 @@ public class CplexTest {
     }
     
     @Test
-    public void testQuadaticAbsExample() {
+    public void testAbsExample() {
     	IMIP mip = TestSuite.provideAbsExample();
     	SolverClient client = new SolverClient(new CPlexMIPSolver());
         IMIPResult result = client.solve(mip);
