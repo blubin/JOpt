@@ -351,5 +351,19 @@ public interface IMIP extends Serializable {
 	/////////////////////
 	
 	IMIP typedClone();
+	
+	// Lazy Constraint Callback:
+	////////////////////////////
+	
+	/**
+	 * @param callback the lazy constraint callback or null to remove the callback from this mip
+	 */
+	void setLazyConstraintCallback(ILazyConstraintCallback callback);
+	
+	
+	/**
+	 * @return the lazy constraint callback or null if no callback was set
+	 */
+	ILazyConstraintCallback getLazyConstraintCallback();
 
 }

@@ -30,6 +30,7 @@
  */
 package edu.harvard.econcs.jopt.solver.mip;
 
+import edu.harvard.econcs.jopt.solver.ILazyConstraintCallback;
 import edu.harvard.econcs.jopt.solver.IMIP;
 import edu.harvard.econcs.jopt.solver.MIPException;
 import edu.harvard.econcs.jopt.solver.SolveParam;
@@ -65,6 +66,7 @@ public class MIP implements IMIP, Serializable, Cloneable {
     private boolean isMax;
     private Map<SolveParam, Object> solveParams = new HashMap<>();
     private Collection<Collection<Variable>> variablesOfInterest = null;
+    private ILazyConstraintCallback lazyConstraintCallback = null;
 
     public MIP() {
         resetDefaultSolveParams();
@@ -650,5 +652,15 @@ public class MIP implements IMIP, Serializable, Cloneable {
     public boolean remove(Constraint constraint) {
         return constraints.remove(constraint);
     }
+
+	@Override
+	public void setLazyConstraintCallback(ILazyConstraintCallback callback) {
+		lazyConstraintCallback = callback;
+	}
+
+	@Override
+	public ILazyConstraintCallback getLazyConstraintCallback() {
+		return lazyConstraintCallback;
+	}
 
 }

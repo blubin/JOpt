@@ -106,6 +106,11 @@ public class LPSolveMIPSolver implements IMIPSolver {
     private static boolean debug = false;
 
     public IMIPResult solve(IMIP mip) throws MIPException {
+    	
+    	if(mip.getLazyConstraintCallback() != null) {
+    		throw new MIPException("Lazy Constraint callback not supported for this solver");
+    	}
+    	
         isCapped = false;
         try {
             Map<String, LinearTerm> objTerms = getObjTerms(mip);
